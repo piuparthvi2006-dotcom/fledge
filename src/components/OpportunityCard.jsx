@@ -1,115 +1,128 @@
 // OpportunityCard.jsx
-// A single opportunity card.
-// Receives one opportunity object as a prop and displays it.
-// Your teammate styles this — you pass the data in.
+// One card. Used by Explore, Saved, and For You pages.
+// Footer is now a full-width button with the deadline centred below it
+// (fixed the spacing issue from the mockup).
 
-// iconBg maps category to a background colour for the icon circle
 const iconBg = {
   internship: '#FEF0E7',
   hackathon: '#FFF8E1',
   research: '#E8F0FE',
-  exchange: '#E8F5E9',
-  summer: '#E8F5E9',
+  exchange: '#F3E8FF',
+  programme: '#E8F5E9',
+  event: '#FFF8E1',
+  scholarship: '#FEF0E7',
   default: '#F5F0EA',
 };
 
-// badgeStyle maps badge text to colours
 const badgeStyles = {
   'Open to all': { background: '#e8f5e9', color: '#2a6e2a' },
   'Closing soon': { background: '#fde8d8', color: '#C94F1A' },
   'Year 1+': { background: '#e8eaf6', color: '#3949ab' },
+  'Year 2+': { background: '#e8eaf6', color: '#3949ab' },
   'New': { background: '#fce4ec', color: '#b5175e' },
+  'Free': { background: '#e8f5e9', color: '#2a6e2a' },
 };
 
-export default function OpportunityCard({ opportunity, isBookmarked, onBookmark }) {
-  // opportunity = one object from your opportunities.json
-  // isBookmarked = true/false from useOpportunities hook
-  // onBookmark = function to call when bookmark button clicked
-
-  const { title, category, organisation, meta, badge, icon } = opportunity;
+export default function OpportunityCard({ opportunity, isBookmarked, onBookmark, highlight, topPick }) {
+  const {
+    id, title, category, organisation, description,
+    location, yearTag, badge, icon, deadlineLabel,
+  } = opportunity;
 
   return (
     <div style={{
-      background: 'white',
-      border: '1px solid #ddd8d0',
+      background: '#ffffff',
+      border: highlight ? '2px solid #C94F1A' : '2px solid #C4BDB5',
       borderRadius: '16px',
-      padding: '18px',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-      cursor: 'pointer',
-      transition: 'border-color 0.2s, box-shadow 0.2s',
-    }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = '#C94F1A';
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(201,79,26,0.12)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = '#ddd8d0';
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.07)';
-      }}
-    >
-      {/* Icon circle */}
-      <div style={{
-        width: '36px', height: '36px',
-        borderRadius: '10px',
-        background: iconBg[category] || iconBg.default,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '17px', marginBottom: '12px',
-      }}>
-        {icon}
+      padding: '20px',
+      position: 'relative',
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+
+      {/* Top pick badge — only shown on For You page for recommended items */}
+      {topPick && (
+        <span style={{
+          position: 'absolute', top: '14px', right: '14px',
+          background: '#C94F1A', color: 'white', fontSize: '10px',
+          fontWeight: 700, padding: '3px 8px', borderRadius: '10px',
+        }}>
+          ⭐ Top Pick
+        </span>
+      )}
+
+      {/* Icon + bookmark row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+        <div style={{
+          width: '38px', height: '38px', borderRadius: '10px',
+          background: iconBg[category] || iconBg.default,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+        }}>
+          {icon}
+        </div>
+
+        {!topPick && (
+          <button
+            onClick={() => onBookmark && onBookmark(id)}
+            style={{
+              width: '30px', height: '30px', borderRadius: '8px',
+              background: isBookmarked ? '#fde8d8' : '#EDEAE5',
+              border: isBookmarked ? '2px solid #C94F1A' : '2px solid #C4BDB5',
+              fontSize: '14px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: isBookmarked ? '#C94F1A' : '#5a5a52',
+            }}
+          >
+            {isBookmarked ? '★' : '☆'}
+          </button>
+        )}
       </div>
 
       {/* Badge */}
       <span style={{
-        display: 'inline-block',
-        fontSize: '10px',
-        padding: '3px 9px',
-        borderRadius: '10px',
-        fontWeight: 500,
-        marginBottom: '10px',
-        fontFamily: "'DM Sans', sans-serif",
-        ...(badgeStyles[badge] || { background: '#f5f0ea', color: '#5a5a52' }),
+        display: 'inline-block', fontSize: '10px', padding: '3px 9px',
+        borderRadius: '10px', fontWeight: 600, marginBottom: '10px',
+        ...(badgeStyles[badge] || { background: '#EDEAE5', color: '#5a5a52' }),
       }}>
         {badge}
       </span>
 
-      {/* Title */}
-      <div style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a18', marginBottom: '3px', lineHeight: 1.3, fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Title + org */}
+      <div style={{ fontSize: '15px', fontWeight: 600, color: '#1a1a18', marginBottom: '3px' }}>
         {title}
       </div>
-
-      {/* Organisation */}
-      <div style={{ fontSize: '12px', color: '#9a9a8a', marginBottom: '8px', fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ fontSize: '12px', color: '#7a7a72', marginBottom: '8px' }}>
         {organisation}
       </div>
 
-      {/* Meta info */}
-      <div style={{ fontSize: '11px', color: '#b0b0a0', marginBottom: '14px', fontFamily: "'DM Sans', sans-serif" }}>
-        {meta}
+      {/* Description */}
+      <div style={{ fontSize: '13px', color: '#5a5a52', lineHeight: 1.5, marginBottom: '12px' }}>
+        {description}
       </div>
 
-      {/* Footer: Details button + Bookmark */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Meta tags — standardized location + year/pay tags */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+        <span style={{ fontSize: '11px', color: '#5a5a52', background: '#EDEAE5', padding: '3px 8px', borderRadius: '6px', fontWeight: 500 }}>
+          {location}
+        </span>
+        <span style={{ fontSize: '11px', color: '#5a5a52', background: '#EDEAE5', padding: '3px 8px', borderRadius: '6px', fontWeight: 500 }}>
+          {yearTag}
+        </span>
+      </div>
+
+      {/* Footer — full width button, deadline centred below */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <button style={{
-          background: '#f5f0ea', border: 'none', borderRadius: '8px',
-          padding: '7px 14px', fontSize: '12px', fontWeight: 500,
-          color: '#C94F1A', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+          width: '100%', background: '#C94F1A', color: '#ffffff', border: 'none',
+          borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 500,
+          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'center',
         }}>
-          Details
+          View Details
         </button>
-
-        <button
-          onClick={() => onBookmark && onBookmark(opportunity.id)}
-          style={{
-            width: '28px', height: '28px', borderRadius: '8px',
-            background: isBookmarked ? '#fde8d8' : '#f5f0ea',
-            border: 'none', fontSize: '13px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: isBookmarked ? '#C94F1A' : '#9a9a8a',
-          }}
-        >
-          {isBookmarked ? '★' : '☆'}
-        </button>
+        <span style={{ fontSize: '11px', color: '#7a7a72', textAlign: 'center' }}>
+          ⏰ {deadlineLabel}
+        </span>
       </div>
+
     </div>
   );
 }

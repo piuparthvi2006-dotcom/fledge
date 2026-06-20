@@ -1,41 +1,33 @@
 // App.jsx
-// This is the root of your app.
-// It imports all components and assembles the landing page.
-// Think of it as the "frame" that holds everything together.
+// The root file. Sets up routing — this is what makes clicking
+// "Explore" / "Saved" / "Sign up" etc actually change the page
+// without reloading the browser.
 
-import { useState } from 'react';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import OpportunitiesSection from './components/OpportunitiesSection';
-import CTA from './components/CTA';
-import Footer from './components/Footer';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Landing from './pages/Landing';
+import Explore from './pages/Explore';
+import Saved from './pages/Saved';
+import ForYou from './pages/ForYou';
+import SignUp from './pages/SignUp';
+import LogIn from './pages/LogIn';
 
-// Google Fonts — paste this in your index.html <head> instead if you prefer
-// For now this works fine here
+// Load fonts once, globally
 const fontLink = document.createElement('link');
 fontLink.href = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;1,600&family=DM+Sans:wght@400;500&display=swap';
 fontLink.rel = 'stylesheet';
 document.head.appendChild(fontLink);
 
 export default function App() {
-  // Bookmarks state lives here so both Navbar and OpportunitiesSection can access it
-  // Later this moves into useOpportunities.js when you wire up the full logic
-  const [bookmarks, setBookmarks] = useState([]);
-
-  function toggleBookmark(id) {
-    setBookmarks(prev =>
-      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
-    );
-  }
-
   return (
-    // The outer div just resets any default browser margins
-    <div style={{ margin: 0, padding: 0, minHeight: '100vh' }}>
-      <Navbar />
-      <Hero />
-      <OpportunitiesSection bookmarks={bookmarks} onBookmark={toggleBookmark} />
-      <CTA />
-      <Footer />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/explore" element={<Explore />} />
+        <Route path="/saved" element={<Saved />} />
+        <Route path="/for-you" element={<ForYou />} />
+        <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<LogIn />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

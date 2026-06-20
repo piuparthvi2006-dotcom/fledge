@@ -1,8 +1,7 @@
-// Footer.jsx
-// Bottom of every page.
+// Footer.jsx — bottom of the landing page.
 
 const FOOTER_LINKS = {
-  Explore: ['Internships', 'Hackathons', 'Research', 'Summer School', 'Exchange'],
+  Explore: ['Internships', 'Hackathons', 'Research', 'Programmes', 'Events'],
   Company: ['About Us', 'Blog', 'Contact'],
   Legal: ['Privacy Policy', 'Terms of Service'],
 };
@@ -11,15 +10,9 @@ export default function Footer() {
   return (
     <>
       <footer style={{
-        display: 'grid',
-        gridTemplateColumns: '1.6fr 1fr 1fr 1fr',
-        gap: '40px',
-        padding: '40px 48px',
-        borderTop: '1px solid #e2ddd6',
-        background: '#FAFAF7',
+        display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', gap: '40px',
+        padding: '40px 48px', borderTop: '1px solid #e2ddd6', background: '#FAFAF7',
       }}>
-
-        {/* Brand column */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: "'Fraunces', serif", fontSize: '21px', fontWeight: 600, color: '#C94F1A' }}>
             <svg width="26" height="20" viewBox="0 0 28 22" fill="none">
@@ -29,31 +22,26 @@ export default function Footer() {
             </svg>
             Fledge
           </div>
-          <p style={{ fontSize: '13px', color: '#9a9a8a', lineHeight: 1.6, maxWidth: '190px', marginTop: '10px', fontFamily: "'DM Sans', sans-serif" }}>
+          <p style={{ fontSize: '13px', color: '#9a9a8a', lineHeight: 1.6, maxWidth: '190px', marginTop: '10px' }}>
             Your career wings, built for students by students.
           </p>
         </div>
 
-        {/* Link columns */}
         {Object.entries(FOOTER_LINKS).map(([heading, links]) => (
           <div key={heading}>
-            <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', fontFamily: "'DM Sans', sans-serif", color: '#1a1a18' }}>
-              {heading}
-            </h4>
+            <h4 style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px', color: '#1a1a18' }}>{heading}</h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
               {links.map(link => (
-                <li key={link} style={{ fontSize: '13px', color: '#9a9a8a', marginBottom: '8px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                <li key={link} style={{ fontSize: '13px', color: '#9a9a8a', marginBottom: '8px', cursor: 'pointer' }}>
                   {link}
                 </li>
               ))}
             </ul>
           </div>
         ))}
-
       </footer>
 
-      {/* Bottom bar */}
-      <div style={{ padding: '14px 48px', borderTop: '1px solid #e2ddd6', textAlign: 'center', fontSize: '12px', color: '#b0b0a8', background: '#FAFAF7', fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ padding: '14px 48px', borderTop: '1px solid #e2ddd6', textAlign: 'center', fontSize: '12px', color: '#b0b0a8', background: '#FAFAF7' }}>
         © 2026 Fledge. Taking flight together.
       </div>
     </>
