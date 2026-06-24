@@ -32,7 +32,7 @@ create table public.opportunities (
     )
   ),
 
-  organizer text,
+  organisation text,
   source_url text,
   eligibility text,
 
@@ -106,7 +106,7 @@ insert into public.opportunities (
   title,
   description,
   category,
-  organizer,
+  organisation,
   source_url,
   eligibility,
   year_min,

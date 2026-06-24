@@ -19,7 +19,7 @@ const SAMPLE_OPPORTUNITIES = [
   {
     id: 2,
     title: 'Hackomania 2026',
-    category: 'hackathon',
+    category: 'competition',
     organisation: 'GovTech Singapore',
     meta: '📅 Feb 2026 · All years',
     badge: 'Closing soon',
@@ -37,7 +37,7 @@ const SAMPLE_OPPORTUNITIES = [
   {
     id: 4,
     title: 'NUS Summer School',
-    category: 'summer',
+    category: 'summer_programme',
     organisation: 'NUS Global Relations',
     meta: '📅 May–Jul · All years',
     badge: 'New',

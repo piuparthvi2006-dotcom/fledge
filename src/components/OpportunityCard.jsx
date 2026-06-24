@@ -5,12 +5,16 @@
 
 const iconBg = {
   internship: '#FEF0E7',
-  hackathon: '#FFF8E1',
+  competition: '#FFF8E1',
   research: '#E8F0FE',
   exchange: '#F3E8FF',
-  programme: '#E8F5E9',
-  event: '#FFF8E1',
-  scholarship: '#FEF0E7',
+  summer_programme: '#E8F5E9',
+  winter_programme: '#E8F5E9',
+  volunteer: '#E8F5E9',
+  mentorship: '#E8F0FE',
+  networking: '#FFF8E1',
+  entrepreneurship: '#FEF0E7',
+  other: '#F5F0EA',
   default: '#F5F0EA',
 };
 

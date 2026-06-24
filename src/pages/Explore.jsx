@@ -1,5 +1,5 @@
 // Explore.jsx
-// The main browsing page. Search + category filter + year filter + sort,
+// The main browsing page. Search + category filters + year filter + sort,
 // all combined to narrow down the opportunities grid.
 
 import { useState, useMemo } from 'react';
@@ -11,7 +11,7 @@ import opportunities, { CATEGORIES } from '../data/opportunities';
 export default function Explore() {
   // --- STATE ---
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategories, setActiveCategories] = useState([]);
   const [activeYear, setActiveYear] = useState(0); // 0 = all years
   const [sortBy, setSortBy] = useState('deadline');
   const [bookmarks, setBookmarks] = useState([]);
@@ -19,6 +19,17 @@ export default function Explore() {
   function toggleBookmark(id) {
     setBookmarks(prev =>
       prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
+    );
+  }
+
+  function toggleCategory(key) {
+    if (key === 'all') {
+      setActiveCategories([]);
+      return;
+    }
+
+    setActiveCategories(prev =>
+      prev.includes(key) ? prev.filter(category => category !== key) : [...prev, key]
     );
   }
 
@@ -37,9 +48,9 @@ export default function Explore() {
       );
     }
 
-    // Category filter
-    if (activeCategory !== 'all') {
-      results = results.filter(o => o.category === activeCategory);
+    // Category filters
+    if (activeCategories.length > 0) {
+      results = results.filter(o => activeCategories.includes(o.category));
     }
 
     // Sort
@@ -54,7 +65,7 @@ export default function Explore() {
     }
 
     return results;
-  }, [searchQuery, activeCategory, sortBy]);
+  }, [searchQuery, activeCategories, sortBy]);
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F5F2ED', color: '#1a1a18', minHeight: '100vh' }}>
@@ -87,7 +98,7 @@ export default function Explore() {
       </div>
 
       {/* Category filters */}
-      <FilterBar categories={CATEGORIES} activeCategory={activeCategory} onSelect={setActiveCategory} />
+      <FilterBar categories={CATEGORIES} activeCategories={activeCategories} onToggle={toggleCategory} />
 
       {/* Year filter */}
       <div style={{ padding: '0 48px 28px', display: 'flex', gap: '8px', alignItems: 'center' }}>

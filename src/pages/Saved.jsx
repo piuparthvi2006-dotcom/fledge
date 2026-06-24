@@ -17,7 +17,7 @@ import opportunities, { CATEGORIES } from '../data/opportunities';
 export default function Saved() {
   // Sample: pretend these 4 are bookmarked. Replace with real shared state later.
   const [bookmarkedIds, setBookmarkedIds] = useState([1, 2, 3, 4]);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategories, setActiveCategories] = useState([]);
   const [sortBy, setSortBy] = useState('deadline');
 
   function removeBookmark(id) {
@@ -26,6 +26,17 @@ export default function Saved() {
 
   function clearAll() {
     setBookmarkedIds([]);
+  }
+
+  function toggleCategory(key) {
+    if (key === 'all') {
+      setActiveCategories([]);
+      return;
+    }
+
+    setActiveCategories(prev =>
+      prev.includes(key) ? prev.filter(category => category !== key) : [...prev, key]
+    );
   }
 
   // Only the opportunities that are bookmarked
@@ -46,8 +57,8 @@ export default function Saved() {
   // Apply category filter + sort
   const filtered = useMemo(() => {
     let results = savedOpportunities;
-    if (activeCategory !== 'all') {
-      results = results.filter(o => o.category === activeCategory);
+    if (activeCategories.length > 0) {
+      results = results.filter(o => activeCategories.includes(o.category));
     }
     if (sortBy === 'deadline') {
       results = [...results].sort((a, b) => {
@@ -59,7 +70,7 @@ export default function Saved() {
       results = [...results].sort((a, b) => a.title.localeCompare(b.title));
     }
     return results;
-  }, [savedOpportunities, activeCategory, sortBy]);
+  }, [savedOpportunities, activeCategories, sortBy]);
 
   // Only show categories that actually have at least 1 saved item (plus "All")
   const visibleCategories = CATEGORIES.filter(
@@ -108,8 +119,8 @@ export default function Saved() {
         <>
           <FilterBar
             categories={visibleCategories}
-            activeCategory={activeCategory}
-            onSelect={setActiveCategory}
+            activeCategories={activeCategories}
+            onToggle={toggleCategory}
             counts={counts}
           />
 

@@ -7,14 +7,14 @@ import Navbar from '../components/Navbar';
 import OpportunityCard from '../components/OpportunityCard';
 import opportunities from '../data/opportunities';
 
+// Sample: which opportunities are "recommended" — later this is computed
+// by matching the user's interests/year against each opportunity's tags
+const recommendedIds = [1, 2, 3];
+const topPickIds = [1, 2]; // subset that gets the "Top Pick" badge
+
 export default function ForYou() {
   // Sample profile data — later this comes from Supabase user profile
-  const [interests, setInterests] = useState(['AI / ML', 'Product', 'Fintech', 'Research', 'Hackathons']);
-
-  // Sample: which opportunities are "recommended" — later this is computed
-  // by matching the user's interests/year against each opportunity's tags
-  const recommendedIds = [1, 2, 3];
-  const topPickIds = [1, 2]; // subset that gets the "Top Pick" badge
+  const [interests] = useState(['AI / ML', 'Product', 'Fintech', 'Research', 'Hackathons']);
 
   const recommended = useMemo(
     () => opportunities.filter(o => recommendedIds.includes(o.id)),

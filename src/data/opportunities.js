@@ -27,7 +27,7 @@ const opportunities = [
   {
     id: 2,
     title: "Hackomania 2026",
-    category: "hackathon",
+    category: "competition",
     organisation: "GovTech Singapore",
     description: "Annual hackathon open to all NUS students. Build something real in 24hrs.",
     location: "💻 Online",
@@ -53,7 +53,7 @@ const opportunities = [
   {
     id: 4,
     title: "NUS Summer School",
-    category: "programme",
+    category: "summer_programme",
     organisation: "NUS Global Relations",
     description: "Short intensive courses over summer, open to all years.",
     location: "🏛 On-campus",
@@ -79,7 +79,7 @@ const opportunities = [
   {
     id: 6,
     title: "MAS Financial Scholarship",
-    category: "scholarship",
+    category: "other",
     organisation: "Monetary Authority of Singapore",
     description: "Scholarship for finance-oriented students with strong academics.",
     location: "💰 Scholarship",
@@ -92,7 +92,7 @@ const opportunities = [
   {
     id: 7,
     title: "Career Wing-up Panel",
-    category: "event",
+    category: "networking",
     organisation: "Tech Leaders Hub",
     description: "Panel discussion with industry leaders on breaking into tech careers.",
     location: "💻 Online",
@@ -123,10 +123,14 @@ export default opportunities;
 export const CATEGORIES = [
   { key: "all", label: "All" },
   { key: "internship", label: "Internships" },
-  { key: "hackathon", label: "Hackathons" },
+  { key: "competition", label: "Competitions" },
   { key: "research", label: "Research" },
   { key: "exchange", label: "Exchange" },
-  { key: "programme", label: "Programmes" },
-  { key: "event", label: "Events" },
-  { key: "scholarship", label: "Scholarships" },
+  { key: "summer_programme", label: "Summer Programmes" },
+  { key: "winter_programme", label: "Winter Programmes" },
+  { key: "volunteer", label: "Volunteer" },
+  { key: "mentorship", label: "Mentorship" },
+  { key: "networking", label: "Networking" },
+  { key: "entrepreneurship", label: "Entrepreneurship" },
+  { key: "other", label: "Other" },
 ];
