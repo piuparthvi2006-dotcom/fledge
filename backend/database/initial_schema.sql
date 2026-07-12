@@ -8,16 +8,6 @@ create table public.majors (
   label text not null
 );
 
-create table public.interest_tags (
-  slug text primary key,
-  label text not null
-);
-
-create table public.career_tags (
-  slug text primary key,
-  label text not null
-);
-
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
@@ -25,10 +15,6 @@ create table public.profiles (
   faculty text,
   major text references public.majors(slug),
   year_of_study integer check (year_of_study between 1 and 4),
-  -- lowercase slugs; must match public.interest_tags.slug
-  interests text[] default '{}',
-  -- lowercase slugs; must match public.career_tags.slug
-  career_goals text[] default '{}',
   created_at timestamptz default now()
 );
 
@@ -61,10 +47,6 @@ create table public.opportunities (
   year_min integer check (year_min between 1 and 4),
   year_max integer check (year_max between 1 and 4),
 
-  -- lowercase slugs; must match public.interest_tags.slug
-  interest_tags text[] default '{}',
-  -- lowercase slugs; must match public.career_tags.slug
-  career_tags text[] default '{}',
   -- lowercase slugs; empty array = open to all majors
   eligible_majors text[] default '{}',
 
@@ -88,27 +70,36 @@ create table public.saved_opportunities (
   primary key (user_id, opportunity_id)
 );
 
+create table public.opportunity_candidates (
+  id uuid primary key default gen_random_uuid(),
+
+  source_type text not null,
+  source_message_id text,
+  source_url text,
+  raw_subject text,
+  raw_sender text,
+  received_at timestamptz,
+  candidate_score integer not null default 0,
+  status text not null default 'pending' check (
+    status in ('pending', 'approved', 'rejected')
+  ),
+
+  -- Stores the parsed opportunity fields before an admin/user approves it.
+  extracted_opportunity jsonb not null,
+
+  created_at timestamptz default now(),
+
+  unique (source_type, source_message_id)
+);
+
 alter table public.majors enable row level security;
-alter table public.interest_tags enable row level security;
-alter table public.career_tags enable row level security;
 alter table public.profiles enable row level security;
 alter table public.opportunities enable row level security;
 alter table public.saved_opportunities enable row level security;
+alter table public.opportunity_candidates enable row level security;
 
 create policy "Anyone can view majors"
 on public.majors
-for select
-to anon, authenticated
-using (true);
-
-create policy "Anyone can view interest tags"
-on public.interest_tags
-for select
-to anon, authenticated
-using (true);
-
-create policy "Anyone can view career tags"
-on public.career_tags
 for select
 to anon, authenticated
 using (true);
@@ -156,73 +147,56 @@ for delete
 to authenticated
 using (auth.uid() = user_id);
 
+-- Crawler writes should happen from trusted server-side code using the Supabase
+-- service role key. No public read/write policy is added for candidates.
+
 insert into public.majors (slug, label) values
-  ('computer_science', 'Computer Science'),
-  ('computer_engineering', 'Computer Engineering'),
-  ('information_systems', 'Information Systems'),
-  ('data_science', 'Data Science'),
-  ('mathematics', 'Mathematics'),
-  ('business', 'Business'),
-  ('engineering', 'Engineering'),
-  ('business_analytics', 'Business Analytics');
-
-insert into public.interest_tags (slug, label) values
-  ('software_development', 'Software Development'),
-  ('programming', 'Programming'),
-  ('technology', 'Technology'),
-  ('career', 'Career'),
-  ('innovation', 'Innovation'),
-  ('teamwork', 'Teamwork'),
-  ('problem_solving', 'Problem Solving'),
-  ('entrepreneurship', 'Entrepreneurship'),
+  ('anthropology', 'Anthropology'),
+  ('architecture', 'Architecture'),
   ('artificial_intelligence', 'Artificial Intelligence'),
-  ('machine_learning', 'Machine Learning'),
-  ('research', 'Research'),
-  ('python', 'Python'),
-  ('exchange', 'Exchange'),
-  ('global', 'Global'),
-  ('travel', 'Travel'),
-  ('international', 'International'),
-  ('startup', 'Startup'),
-  ('business', 'Business'),
-  ('data_science', 'Data Science'),
-  ('analytics', 'Analytics'),
-  ('volunteering', 'Volunteering'),
-  ('community', 'Community'),
-  ('social_impact', 'Social Impact'),
-  ('leadership', 'Leadership'),
-  ('mentorship', 'Mentorship'),
-  ('networking', 'Networking'),
-  ('guidance', 'Guidance'),
-  ('business_model', 'Business Model'),
-  ('pitching', 'Pitching'),
-  ('general', 'General'),
-  ('student_development', 'Student Development');
-
-insert into public.career_tags (slug, label) values
-  ('software_engineer', 'Software Engineer'),
-  ('full_stack_developer', 'Full-Stack Developer'),
-  ('tech_industry', 'Tech Industry'),
-  ('entrepreneur', 'Entrepreneur'),
-  ('product_manager', 'Product Manager'),
-  ('innovator', 'Innovator'),
-  ('researcher', 'Researcher'),
-  ('data_scientist', 'Data Scientist'),
-  ('academia', 'Academia'),
-  ('global_professional', 'Global Professional'),
-  ('international_career', 'International Career'),
-  ('founder', 'Founder'),
-  ('startup_founder', 'Startup Founder'),
-  ('data_analyst', 'Data Analyst'),
-  ('business_analyst', 'Business Analyst'),
-  ('non_profit', 'Non-Profit'),
-  ('community_leader', 'Community Leader'),
-  ('career_growth', 'Career Growth'),
-  ('professional_development', 'Professional Development'),
-  ('venture_capital', 'Venture Capital'),
-  ('startup_ecosystem', 'Startup Ecosystem'),
-  ('startup_builder', 'Startup Builder'),
-  ('general_career_exploration', 'General Career Exploration');
+  ('business_administration', 'Business Administration'),
+  ('business_analytics', 'Business Analytics'),
+  ('business_artificial_intelligence_systems', 'Business Artificial Intelligence Systems'),
+  ('chemistry', 'Chemistry'),
+  ('chinese_languages_and_cultures', 'Chinese Languages and Cultures'),
+  ('chinese_studies_bilingual', 'Chinese Studies (Bilingual)'),
+  ('common_computer_science_programmes', 'Common Computer Science Programmes'),
+  ('communications_and_new_media', 'Communications and New Media'),
+  ('computer_science', 'Computer Science'),
+  ('data_science_and_analytics', 'Data Science and Analytics'),
+  ('data_science_and_economics', 'Data Science and Economics'),
+  ('economics', 'Economics'),
+  ('engineering', 'Engineering'),
+  ('english_language_and_linguistics', 'English Language and Linguistics'),
+  ('english_literature', 'English Literature'),
+  ('environmental_studies', 'Environmental Studies'),
+  ('food_science_and_technology', 'Food Science and Technology'),
+  ('geography', 'Geography'),
+  ('geospatial_intelligence', 'Geospatial Intelligence'),
+  ('global_studies', 'Global Studies'),
+  ('history', 'History'),
+  ('humanities_and_sciences', 'Humanities and Sciences'),
+  ('industrial_design', 'Industrial Design'),
+  ('information_security', 'Information Security'),
+  ('infrastructure_and_project_management', 'Infrastructure and Project Management'),
+  ('japanese_studies', 'Japanese Studies'),
+  ('landscape_architecture', 'Landscape Architecture'),
+  ('life_sciences', 'Life Sciences'),
+  ('malay_studies', 'Malay Studies'),
+  ('mathematics', 'Mathematics'),
+  ('philosophy', 'Philosophy'),
+  ('philosophy_politics_and_economics', 'Philosophy, Politics and Economics'),
+  ('physics', 'Physics'),
+  ('political_science', 'Political Science'),
+  ('psychology', 'Psychology'),
+  ('quantitative_finance', 'Quantitative Finance'),
+  ('social_work', 'Social Work'),
+  ('sociology', 'Sociology'),
+  ('south_asian_studies', 'South Asian Studies'),
+  ('southeast_asian_studies', 'Southeast Asian Studies'),
+  ('statistics', 'Statistics'),
+  ('theatre_and_performance_studies', 'Theatre and Performance Studies'),
+  ('other', 'Other');
 
 insert into public.opportunities (
   title,
@@ -233,8 +207,6 @@ insert into public.opportunities (
   eligibility,
   year_min,
   year_max,
-  interest_tags,
-  career_tags,
   eligible_majors,
   delivery_mode,
   location,
@@ -250,9 +222,7 @@ values
   'Basic programming knowledge recommended.',
   1,
   4,
-  array['software_development', 'programming', 'technology', 'career'],
-  array['software_engineer', 'full_stack_developer', 'tech_industry'],
-  array['computer_science', 'computer_engineering', 'information_systems'],
+  array['computer_science', 'engineering', 'business_artificial_intelligence_systems'],
   'hybrid',
   null,
   now() + interval '40 days'
@@ -266,8 +236,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['innovation', 'teamwork', 'problem_solving', 'entrepreneurship'],
-  array['entrepreneur', 'product_manager', 'innovator'],
   '{}',
   'in_person',
   'On campus',
@@ -282,9 +250,7 @@ values
   'Basic Python knowledge recommended.',
   1,
   4,
-  array['artificial_intelligence', 'machine_learning', 'research', 'python'],
-  array['researcher', 'data_scientist', 'academia'],
-  array['computer_science', 'data_science', 'mathematics'],
+  array['computer_science', 'data_science_and_analytics', 'mathematics'],
   'in_person',
   'School of Computing',
   now() + interval '30 days'
@@ -298,8 +264,6 @@ values
   'Recommended for year 1 and year 2 students.',
   1,
   2,
-  array['exchange', 'global', 'travel', 'international'],
-  array['global_professional', 'international_career'],
   '{}',
   'online',
   null,
@@ -314,9 +278,7 @@ values
   'Open to students interested in startups, innovation, or business.',
   1,
   4,
-  array['entrepreneurship', 'startup', 'business', 'innovation'],
-  array['founder', 'entrepreneur', 'startup_founder'],
-  array['business', 'computer_science', 'engineering'],
+  array['business_administration', 'computer_science', 'engineering'],
   'in_person',
   'On campus',
   now() + interval '60 days'
@@ -330,9 +292,7 @@ values
   'No prior data science experience required.',
   1,
   4,
-  array['data_science', 'python', 'machine_learning', 'analytics'],
-  array['data_analyst', 'data_scientist', 'business_analyst'],
-  array['computer_science', 'data_science', 'business_analytics'],
+  array['computer_science', 'data_science_and_analytics', 'business_analytics'],
   'online',
   null,
   now() + interval '75 days'
@@ -346,8 +306,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['volunteering', 'community', 'social_impact', 'leadership'],
-  array['social_impact', 'non_profit', 'community_leader'],
   '{}',
   'in_person',
   'Local community centre',
@@ -362,8 +320,6 @@ values
   'Open to students seeking academic or career advice.',
   1,
   4,
-  array['mentorship', 'career', 'networking', 'guidance'],
-  array['career_growth', 'professional_development'],
   '{}',
   'hybrid',
   null,
@@ -378,8 +334,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['entrepreneurship', 'networking', 'business', 'startup'],
-  array['founder', 'venture_capital', 'startup_ecosystem'],
   '{}',
   'in_person',
   'Main Auditorium',
@@ -394,9 +348,7 @@ values
   'Students should have a startup idea or strong interest in entrepreneurship.',
   1,
   4,
-  array['entrepreneurship', 'startup', 'business_model', 'pitching'],
-  array['founder', 'entrepreneur', 'startup_builder'],
-  array['business', 'computer_science', 'engineering'],
+  array['business_administration', 'computer_science', 'engineering'],
   'in_person',
   'Innovation Lab',
   now() + interval '50 days'
@@ -410,8 +362,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['general', 'student_development', 'career'],
-  array['general_career_exploration'],
   '{}',
   'unspecified',
   null,
@@ -435,3 +385,9 @@ on public.opportunities(year_max);
 
 create index saved_opportunities_user_id_idx
 on public.saved_opportunities(user_id);
+
+create index opportunity_candidates_status_idx
+on public.opportunity_candidates(status);
+
+create index opportunity_candidates_score_idx
+on public.opportunity_candidates(candidate_score);

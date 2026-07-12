@@ -7,7 +7,6 @@ create table public.profiles (
   faculty text,
   major text,
   year_of_study integer check (year_of_study between 1 and 6),
-  interests text[] default '{}',
   created_at timestamptz default now()
 );
 
@@ -38,8 +37,6 @@ create table public.opportunities (
 
   year_min integer check (year_min between 1 and 6),
   year_max integer check (year_max between 1 and 6),
-
-  interest_tags text[] default '{}',
 
   location text,
   deadline timestamptz,
@@ -111,7 +108,6 @@ insert into public.opportunities (
   eligibility,
   year_min,
   year_max,
-  interest_tags,
   location,
   deadline
 )
@@ -125,7 +121,6 @@ values
   'Basic programming knowledge recommended.',
   1,
   4,
-  array['software development', 'programming', 'technology', 'career'],
   'Hybrid',
   now() + interval '40 days'
 ),
@@ -138,7 +133,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['innovation', 'teamwork', 'problem solving', 'entrepreneurship'],
   'On campus',
   now() + interval '25 days'
 ),
@@ -151,7 +145,6 @@ values
   'Basic Python knowledge recommended.',
   1,
   4,
-  array['artificial intelligence', 'machine learning', 'research', 'python'],
   'On campus',
   now() + interval '30 days'
 ),
@@ -164,7 +157,6 @@ values
   'Recommended for year 1 and year 2 students.',
   1,
   2,
-  array['exchange', 'global', 'travel', 'international'],
   'Online',
   now() + interval '21 days'
 ),
@@ -177,7 +169,6 @@ values
   'Open to students interested in startups, innovation, or business.',
   1,
   4,
-  array['entrepreneurship', 'startup', 'business', 'innovation'],
   'On campus',
   now() + interval '60 days'
 ),
@@ -190,7 +181,6 @@ values
   'No prior data science experience required.',
   1,
   4,
-  array['data science', 'python', 'machine learning', 'analytics'],
   'Online',
   now() + interval '75 days'
 ),
@@ -203,7 +193,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['volunteering', 'community', 'social impact', 'leadership'],
   'Local community centre',
   now() + interval '20 days'
 ),
@@ -216,7 +205,6 @@ values
   'Open to students seeking academic or career advice.',
   1,
   4,
-  array['mentorship', 'career', 'networking', 'guidance'],
   'Hybrid',
   now() + interval '35 days'
 ),
@@ -229,7 +217,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['entrepreneurship', 'networking', 'business', 'startup'],
   'Main Auditorium',
   now() + interval '14 days'
 ),
@@ -242,7 +229,6 @@ values
   'Students should have a startup idea or strong interest in entrepreneurship.',
   1,
   4,
-  array['entrepreneurship', 'startup', 'business model', 'pitching'],
   'Innovation Lab',
   now() + interval '50 days'
 ),
@@ -255,7 +241,6 @@ values
   'Open to all students.',
   1,
   4,
-  array['general', 'student development', 'career'],
   'To be confirmed',
   now() + interval '28 days'
 );

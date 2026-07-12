@@ -26,7 +26,7 @@ export default function Hero() {
           maxWidth: '440px', margin: '0 auto 36px', fontFamily: "'DM Sans', sans-serif",
         }}>
           Internships, hackathons, research, exchange, summer programmes —
-          filtered for your year, your interests, your goals.
+          filtered for your year and major.
         </p>
 
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>

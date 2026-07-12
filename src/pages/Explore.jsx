@@ -6,12 +6,14 @@ import { useState, useMemo } from 'react';
 import Navbar from '../components/Navbar';
 import FilterBar from '../components/FilterBar';
 import OpportunityCard from '../components/OpportunityCard';
-import opportunities, { CATEGORIES } from '../data/opportunities';
+import opportunities, { CATEGORIES, MAJORS } from '../data/opportunities';
+import { matchesMajor, matchesYear } from '../utils/filterOpportunities';
 
 export default function Explore() {
   // --- STATE ---
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategories, setActiveCategories] = useState([]);
+  const [selectedMajor, setSelectedMajor] = useState('');
   const [activeYear, setActiveYear] = useState(0); // 0 = all years
   const [sortBy, setSortBy] = useState('deadline');
   const [bookmarks, setBookmarks] = useState([]);
@@ -53,6 +55,16 @@ export default function Explore() {
       results = results.filter(o => activeCategories.includes(o.category));
     }
 
+    // Major filter — opportunities with no eligible_majors are open to all
+    if (selectedMajor) {
+      results = results.filter(o => matchesMajor(o, selectedMajor));
+    }
+
+    // Year filter
+    if (activeYear !== 0) {
+      results = results.filter(o => matchesYear(o, activeYear));
+    }
+
     // Sort
     if (sortBy === 'deadline') {
       results = [...results].sort((a, b) => {
@@ -65,7 +77,7 @@ export default function Explore() {
     }
 
     return results;
-  }, [searchQuery, activeCategories, sortBy]);
+  }, [searchQuery, activeCategories, selectedMajor, activeYear, sortBy]);
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F5F2ED', color: '#1a1a18', minHeight: '100vh' }}>
@@ -99,6 +111,35 @@ export default function Explore() {
 
       {/* Category filters */}
       <FilterBar categories={CATEGORIES} activeCategories={activeCategories} onToggle={toggleCategory} />
+
+      {/* Major filter */}
+      <div style={{ padding: '0 48px 18px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <label htmlFor="major-filter" style={{ fontSize: '13px', color: '#6a6a62', marginRight: '4px', fontWeight: 500 }}>
+          Major:
+        </label>
+        <select
+          id="major-filter"
+          value={selectedMajor}
+          onChange={e => setSelectedMajor(e.target.value)}
+          style={{
+            fontSize: '13px',
+            color: '#1a1a18',
+            border: '2px solid #C4BDB5',
+            borderRadius: '8px',
+            padding: '7px 10px',
+            background: '#ffffff',
+            fontFamily: "'DM Sans', sans-serif",
+            outline: 'none',
+          }}
+        >
+          <option value="">All majors</option>
+          {MAJORS.map(major => (
+            <option key={major.key} value={major.key}>
+              {major.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Year filter */}
       <div style={{ padding: '0 48px 28px', display: 'flex', gap: '8px', alignItems: 'center' }}>

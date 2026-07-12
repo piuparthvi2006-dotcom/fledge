@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "crawl:demo": "node backend/crawler/runCrawler.js",
+    "crawl:outlook": "node backend/crawler/runCrawler.js --outlook"
   },
   "dependencies": {
     "react": "^19.2.6",

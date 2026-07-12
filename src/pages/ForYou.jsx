@@ -1,21 +1,18 @@
 // ForYou.jsx
-// Personalised page: profile strip, interest tags, recommended cards,
+// Personalised page: profile strip, recommended cards,
 // and an upcoming-deadlines list pulled from saved items.
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import Navbar from '../components/Navbar';
 import OpportunityCard from '../components/OpportunityCard';
 import opportunities from '../data/opportunities';
 
 // Sample: which opportunities are "recommended" — later this is computed
-// by matching the user's interests/year against each opportunity's tags
+// by matching the user's major and year against each opportunity
 const recommendedIds = [1, 2, 3];
 const topPickIds = [1, 2]; // subset that gets the "Top Pick" badge
 
 export default function ForYou() {
-  // Sample profile data — later this comes from Supabase user profile
-  const [interests] = useState(['AI / ML', 'Product', 'Fintech', 'Research', 'Hackathons']);
-
   const recommended = useMemo(
     () => opportunities.filter(o => recommendedIds.includes(o.id)),
     []
@@ -41,7 +38,7 @@ export default function ForYou() {
           For You
         </h1>
         <p style={{ fontSize: '15px', color: '#6e6e64' }}>
-          Personalised picks based on your year and interests
+          Personalised picks based on your year and major
         </p>
       </div>
 
@@ -73,33 +70,11 @@ export default function ForYou() {
         </button>
       </div>
 
-      {/* Interest tags */}
-      <div style={{ margin: '0 48px 28px' }}>
-        <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px' }}>Your interests</div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {interests.map(tag => (
-            <span key={tag} style={{
-              padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 500,
-              background: '#FEF0E7', color: '#C94F1A', border: '1.5px solid #f0ddd0',
-            }}>
-              {tag}
-            </span>
-          ))}
-          <button style={{
-            padding: '6px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 500,
-            background: '#EDEAE5', color: '#5a5a52', border: '2px dashed #8a8880', cursor: 'pointer',
-            fontFamily: "'DM Sans', sans-serif",
-          }}>
-            + Add interest
-          </button>
-        </div>
-      </div>
-
       {/* Recommended section */}
       <div style={{ padding: '0 48px 16px', fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 600 }}>
         Recommended for you
         <span style={{ fontSize: '13px', color: '#9a9a8a', fontFamily: "'DM Sans', sans-serif", fontWeight: 400, marginLeft: '8px' }}>
-          Based on Year 1 · AI · Fintech
+          Based on Year 1 · Computing
         </span>
       </div>
 
