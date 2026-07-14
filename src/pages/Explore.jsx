@@ -9,6 +9,10 @@ import OpportunityCard from '../components/OpportunityCard';
 import opportunities, { CATEGORIES, MAJORS } from '../data/opportunities';
 import { matchesMajor, matchesYear } from '../utils/filterOpportunities';
 
+function getDeadlineTime(opportunity) {
+  return opportunity.deadline ? new Date(opportunity.deadline).getTime() : Number.POSITIVE_INFINITY;
+}
+
 export default function Explore() {
   // --- STATE ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,9 +72,7 @@ export default function Explore() {
     // Sort
     if (sortBy === 'deadline') {
       results = [...results].sort((a, b) => {
-        if (!a.deadline) return 1;  // no deadline = goes last
-        if (!b.deadline) return -1;
-        return new Date(a.deadline) - new Date(b.deadline);
+        return getDeadlineTime(a) - getDeadlineTime(b);
       });
     } else if (sortBy === 'title') {
       results = [...results].sort((a, b) => a.title.localeCompare(b.title));

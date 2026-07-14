@@ -66,6 +66,33 @@ function isActiveCandidate(candidate) {
   return new Date(deadline) >= new Date();
 }
 
+function getSourceByType(type) {
+  return crawlerSources.find((source) => source.type === type);
+}
+
+function getCandidatePriority(candidate) {
+  return candidate.source_priority ?? candidate.opportunity?.source_priority ?? 99;
+}
+
+function getCandidateDeadlineTime(candidate) {
+  const deadline = candidate.opportunity.deadline;
+
+  return deadline ? new Date(deadline).getTime() : Number.POSITIVE_INFINITY;
+}
+
+function compareCandidates(a, b) {
+  const scoreDiff = b.candidate_score - a.candidate_score;
+  if (scoreDiff !== 0) return scoreDiff;
+
+  const deadlineDiff = getCandidateDeadlineTime(a) - getCandidateDeadlineTime(b);
+  if (deadlineDiff !== 0) return deadlineDiff;
+
+  const priorityDiff = getCandidatePriority(a) - getCandidatePriority(b);
+  if (priorityDiff !== 0) return priorityDiff;
+
+  return String(a.raw_subject).localeCompare(String(b.raw_subject));
+}
+
 async function getOutlookMessages() {
   const refreshToken = getRequiredEnv("OUTLOOK_REFRESH_TOKEN");
   const accessToken = await getAccessTokenFromRefreshToken(refreshToken);
@@ -99,6 +126,7 @@ function toCandidateRows(candidates) {
     raw_subject: candidate.raw_subject,
     raw_sender: candidate.raw_sender,
     received_at: candidate.received_at,
+    source_priority: candidate.source_priority,
     candidate_score: candidate.candidate_score,
     status: candidate.status,
     extracted_opportunity: candidate.opportunity,
@@ -116,11 +144,13 @@ async function main() {
   let scannedCount = 0;
 
   if (useOutlook || useAllSources) {
+    const outlookSource = getSourceByType("outlook_mailbox");
     const emails = await getOutlookMessages();
     scannedCount += emails.length;
     candidates.push(
       ...parseEmailsToOpportunityCandidates(emails, {
         schoolSlug: "nus",
+        sourcePriority: outlookSource?.sourcePriority,
       })
     );
   }
@@ -133,6 +163,7 @@ async function main() {
       console.log(
         webDocuments.map((document) => ({
           source: document.sourceId,
+          priority: document.sourcePriority,
           title: document.title,
           score: scoreOpportunityText(
             [document.title, document.summary, document.text].join(" ")
@@ -146,15 +177,17 @@ async function main() {
   }
 
   if (!useOutlook && !usePublicWeb && !useAllSources) {
+    const outlookSource = getSourceByType("outlook_mailbox");
     scannedCount = demoEmails.length;
     candidates.push(
       ...parseEmailsToOpportunityCandidates(demoEmails, {
         schoolSlug: "nus",
+        sourcePriority: outlookSource?.sourcePriority,
       })
     );
   }
 
-  const activeCandidates = candidates.filter(isActiveCandidate);
+  const activeCandidates = candidates.filter(isActiveCandidate).sort(compareCandidates);
 
   console.log(`Scanned ${scannedCount} source items.`);
   console.log(`Found ${candidates.length} possible opportunities.`);

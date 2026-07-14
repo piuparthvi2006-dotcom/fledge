@@ -19,6 +19,28 @@ const ASTAR_HOSTS = ["a-star.edu.sg", "www.a-star.edu.sg"];
 const PIER71_HOSTS = ["pier71.sg", "www.pier71.sg"];
 const CYBERSG_HOSTS = ["tig.cybersg.sg", "ice71.sg"];
 
+export const SOURCE_PRIORITIES = {
+  NUS_WEBSITE: 1,
+  NUS_OUTLOOK: 2,
+  EXTERNAL_PUBLIC: 3,
+};
+
+function isNusHost(host) {
+  return host === "nus.edu.sg" || host.endsWith(".nus.edu.sg");
+}
+
+function inferSourcePriority(source) {
+  if (source.type === "public_web" && source.allowedHosts?.some(isNusHost)) {
+    return SOURCE_PRIORITIES.NUS_WEBSITE;
+  }
+
+  if (source.type === "outlook_mailbox") {
+    return SOURCE_PRIORITIES.NUS_OUTLOOK;
+  }
+
+  return SOURCE_PRIORITIES.EXTERNAL_PUBLIC;
+}
+
 export const OUTLOOK_SEARCH_KEYWORDS = [
   "internship",
   "research assistant",
@@ -44,7 +66,7 @@ export const OUTLOOK_SEARCH_KEYWORDS = [
 // "school: nus" means the opportunity should be suitable for NUS students.
 // It does not mean the opportunity must be hosted by NUS. External organisers
 // can be added here as public_web sources with their own allowedHosts.
-export const crawlerSources = [
+const crawlerSourceConfig = [
   {
     id: "nus-outlook-user-mailbox",
     school: DEFAULT_SCHOOL,
@@ -232,7 +254,7 @@ export const crawlerSources = [
     url: "https://www.nyc.gov.sg/programmes-grants/",
     enabled: true,
     allowedHosts: NYC_HOSTS,
-    defaultCategory: "volunteer",
+    defaultCategory: "community",
     sourceTrustBoost: 2,
     targetAudience: "nus_students",
     requiresNusStudentEligibility: true,
@@ -246,7 +268,7 @@ export const crawlerSources = [
     url: "https://www.nyc.gov.sg/programmes-grants/programmes/young-changemakers/",
     enabled: true,
     allowedHosts: NYC_HOSTS,
-    defaultCategory: "volunteer",
+    defaultCategory: "community",
     sourceTrustBoost: 2,
     targetAudience: "nus_students",
     requiresNusStudentEligibility: true,
@@ -271,14 +293,14 @@ export const crawlerSources = [
     school: DEFAULT_SCHOOL,
     type: "public_web",
     name: "PIER71 Smart Port Challenge",
-    url: "https://pier71.sg/",
+    url: "https://pier71.sg/smart-port-challenge/",
     enabled: true,
     allowedHosts: PIER71_HOSTS,
     defaultCategory: "competition",
     sourceTrustBoost: 1,
     targetAudience: "nus_students",
     requiresNusStudentEligibility: true,
-    maxLinkedPages: 6,
+    maxLinkedPages: 4,
   },
   {
     id: "cybersg-tig",
@@ -295,5 +317,10 @@ export const crawlerSources = [
     maxLinkedPages: 5,
   },
 ];
+
+export const crawlerSources = crawlerSourceConfig.map((source) => ({
+  ...source,
+  sourcePriority: source.sourcePriority ?? inferSourcePriority(source),
+}));
 
 export const sources = crawlerSources;

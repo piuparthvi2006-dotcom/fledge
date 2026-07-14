@@ -3,12 +3,11 @@ const PUBLIC_WEB_LINK_KEYWORDS = [
   "application",
   "apprenticeship",
   "apprenticeships",
-  "award",
-  "awards",
-  "career",
-  "careers",
+  "changemaker",
+  "changemakers",
   "challenge",
   "challenges",
+  "civic action",
   "competition",
   "competitions",
   "exchange",
@@ -16,27 +15,45 @@ const PUBLIC_WEB_LINK_KEYWORDS = [
   "grant",
   "grants",
   "hackathon",
-  "innovation",
   "internship",
   "internships",
-  "job",
-  "jobs",
-  "opportunities",
-  "opportunity",
-  "programme",
-  "programmes",
-  "program",
-  "programs",
-  "research",
+  "research attachment",
+  "research attachments",
+  "research internship",
   "scholarship",
   "scholarships",
   "student-exchange",
   "summer",
-  "talent",
+  "tech-up",
+  "undergraduate programme",
   "volunteer",
   "volunteering",
   "winter",
-  "youth",
+  "young defence scientists",
+];
+
+const PUBLIC_WEB_EXCLUDED_PATH_PARTS = [
+  "/article/",
+  "/articles/",
+  "/blog/",
+  "/blogs/",
+  "/media/",
+  "/news/",
+  "/past-event",
+  "/past-events",
+  "/press-release",
+  "/press-releases",
+  "/who-we-are/awards-and-accolades",
+];
+
+const PUBLIC_WEB_EXCLUDED_FILE_EXTENSIONS = [
+  ".doc",
+  ".docx",
+  ".pdf",
+  ".ppt",
+  ".pptx",
+  ".xls",
+  ".xlsx",
 ];
 
 function decodeHtmlEntities(text) {
@@ -101,6 +118,23 @@ function isAllowedHost(url, allowedHosts = []) {
   });
 }
 
+function isExcludedCrawlerUrl(url) {
+  const { pathname } = new URL(url);
+  const normalizedPath = pathname.toLowerCase();
+
+  if (
+    PUBLIC_WEB_EXCLUDED_FILE_EXTENSIONS.some((extension) =>
+      normalizedPath.endsWith(extension)
+    )
+  ) {
+    return true;
+  }
+
+  return PUBLIC_WEB_EXCLUDED_PATH_PARTS.some((pathPart) =>
+    normalizedPath.includes(pathPart)
+  );
+}
+
 function extractLinks(html, baseUrl, allowedHosts) {
   const links = [];
   const seenUrls = new Set();
@@ -113,6 +147,7 @@ function extractLinks(html, baseUrl, allowedHosts) {
       const text = stripHtml(match[2]);
 
       if (!text || !isAllowedHost(url, allowedHosts)) continue;
+      if (isExcludedCrawlerUrl(url)) continue;
       if (seenUrls.has(url)) continue;
 
       seenUrls.add(url);
@@ -126,6 +161,8 @@ function extractLinks(html, baseUrl, allowedHosts) {
 }
 
 function isLikelyOpportunityLink(link) {
+  if (isExcludedCrawlerUrl(link.url)) return false;
+
   const haystack = `${link.text} ${link.url}`.toLowerCase();
   return PUBLIC_WEB_LINK_KEYWORDS.some((keyword) => haystack.includes(keyword));
 }
@@ -169,6 +206,8 @@ function createWebDocument(source, url, html, fallbackTitle) {
     summary,
     text,
     defaultCategory: source.defaultCategory,
+    minScore: source.minScore,
+    sourcePriority: source.sourcePriority ?? 99,
     sourceTrustBoost: source.sourceTrustBoost ?? 0,
     targetAudience: source.targetAudience,
     requiresNusStudentEligibility: source.requiresNusStudentEligibility ?? true,
@@ -206,7 +245,11 @@ export async function fetchPublicWebSource(source) {
 export async function fetchPublicWebDocuments(sources) {
   const documents = [];
 
-  for (const source of sources) {
+  const crawlOrderedSources = [...sources].sort(
+    (a, b) => (a.sourcePriority ?? 99) - (b.sourcePriority ?? 99)
+  );
+
+  for (const source of crawlOrderedSources) {
     if (!source.enabled || source.type !== "public_web") continue;
 
     try {

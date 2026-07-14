@@ -11,6 +11,7 @@ const iconBg = {
   summer_programme: '#E8F5E9',
   winter_programme: '#E8F5E9',
   volunteer: '#E8F5E9',
+  community: '#E8F5E9',
   mentorship: '#E8F0FE',
   networking: '#FFF8E1',
   entrepreneurship: '#FEF0E7',

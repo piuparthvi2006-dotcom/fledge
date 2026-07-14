@@ -26,6 +26,7 @@ function getCategoryIcon(category) {
     networking: "🎤",
     entrepreneurship: "🚀",
     volunteer: "🤝",
+    community: "🌱",
     other: "✨",
   };
 
@@ -56,6 +57,7 @@ export function formatOpportunity(row) {
     deadlineLabel: formatDeadline(row.deadline),
     icon: getCategoryIcon(row.category),
     badge: "Open to all",
+    source_priority: row.source_priority ?? 99,
 
     year_min: row.year_min,
     year_max: row.year_max,

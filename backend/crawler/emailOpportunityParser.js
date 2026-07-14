@@ -8,6 +8,31 @@ const CATEGORY_RULES = [
     keywords: ["competition", "hackathon", "challenge", "case competition", "contest"],
   },
   {
+    category: "volunteer",
+    keywords: ["volunteer", "volunteering", "community service", "charity"],
+  },
+  {
+    category: "community",
+    keywords: [
+      "changemaker",
+      "change maker",
+      "civic action",
+      "collective impact",
+      "community",
+      "community impact",
+      "community leadership",
+      "community project",
+      "grant making",
+      "social impact",
+      "social innovator",
+      "social innovation",
+      "society",
+      "youth curators",
+      "youth-led",
+      "youth led",
+    ],
+  },
+  {
     category: "research",
     keywords: ["research", "research assistant", "urop", "lab assistant"],
   },
@@ -22,10 +47,6 @@ const CATEGORY_RULES = [
   {
     category: "winter_programme",
     keywords: ["winter programme", "winter program", "winter school", "winter course"],
-  },
-  {
-    category: "volunteer",
-    keywords: ["volunteer", "volunteering", "community service", "social impact"],
   },
   {
     category: "mentorship",
@@ -700,8 +721,112 @@ const FOREIGN_ONLY_PATTERNS = [
   /\bmust\s+be\s+(?:a\s+)?(?:us|u\.s\.|uk|u\.k\.|australian|canadian|indian|malaysian|indonesian)\s+(?:citizen|resident|national)\b/i,
 ];
 
+const CURRENT_APPLICATION_SIGNALS = [
+  "accepting applications",
+  "application deadline",
+  "application period",
+  "applications are open",
+  "applications now open",
+  "applications open",
+  "apply by",
+  "apply now",
+  "call for applications",
+  "closes on",
+  "deadline",
+  "open for applications",
+  "open for registration",
+  "register by",
+  "register now",
+  "registration open",
+  "registrations open",
+  "submit your application",
+];
+
+const HISTORICAL_PAGE_SIGNALS = [
+  "award ceremony",
+  "awarded",
+  "concluded",
+  "has closed",
+  "highlights",
+  "launched today",
+  "media release",
+  "past event",
+  "press release",
+  "recap",
+  "was launched",
+  "were awarded",
+  "winners",
+];
+
+const HISTORICAL_URL_SEGMENTS = [
+  "/article/",
+  "/articles/",
+  "/blog/",
+  "/blogs/",
+  "/media/",
+  "/news/",
+  "/past-event",
+  "/past-events",
+  "/press-release",
+  "/press-releases",
+];
+
 function findFirstSignal(text, signals) {
   return signals.find((signal) => keywordMatches(text, signal));
+}
+
+function hasCurrentApplicationSignal(text) {
+  return Boolean(findFirstSignal(text.toLowerCase(), CURRENT_APPLICATION_SIGNALS));
+}
+
+function containsPastYear(text) {
+  const currentYear = new Date().getFullYear();
+  const yearPattern = /\b20\d{2}\b/g;
+  let match;
+
+  while ((match = yearPattern.exec(text)) !== null) {
+    if (Number(match[0]) < currentYear) return true;
+  }
+
+  return false;
+}
+
+function hasHistoricalUrl(sourceUrl) {
+  if (!sourceUrl) return false;
+
+  try {
+    const { pathname } = new URL(sourceUrl);
+    const normalizedPath = pathname.toLowerCase();
+
+    return HISTORICAL_URL_SEGMENTS.some((segment) =>
+      normalizedPath.includes(segment)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function isHistoricalPublicWebPage({
+  sourceUrl,
+  title = "",
+  descriptionText = "",
+  fullText = "",
+}) {
+  const reviewText = normalizeWhitespace(
+    [title, descriptionText, fullText.slice(0, 1200)].filter(Boolean).join(" ")
+  );
+  const lowerReviewText = reviewText.toLowerCase();
+
+  if (hasCurrentApplicationSignal(lowerReviewText)) return false;
+
+  const historicalSignal = findFirstSignal(lowerReviewText, HISTORICAL_PAGE_SIGNALS);
+  const hasPastYear = containsPastYear(reviewText);
+
+  return (
+    hasHistoricalUrl(sourceUrl) ||
+    (historicalSignal && hasPastYear) ||
+    (hasPastYear && /\bawards?\b|ceremony|winners?|press|news/i.test(reviewText))
+  );
 }
 
 function assessNusStudentEligibility(text, options = {}) {
@@ -937,6 +1062,7 @@ export function parseTextToOpportunityCandidate({
   organisation = "Unknown organisation",
   schoolSlug = "nus",
   defaultCategory = "other",
+  sourcePriority = 99,
   scoreBoost = 0,
   requiresNusStudentEligibility = true,
   trustedForNusStudents = false,
@@ -945,6 +1071,14 @@ export function parseTextToOpportunityCandidate({
   const text = normalizeWhitespace(
     [title, descriptionText, fullText].filter(Boolean).join(" ")
   );
+
+  if (
+    sourceType === "public_web" &&
+    isHistoricalPublicWebPage({ sourceUrl, title, descriptionText, fullText })
+  ) {
+    return null;
+  }
+
   const candidateScore = scoreOpportunityText(text) + scoreBoost;
 
   if (candidateScore < minScore) {
@@ -971,10 +1105,12 @@ export function parseTextToOpportunityCandidate({
     raw_subject: rawTitle,
     raw_sender: rawSender,
     received_at: receivedAt,
+    source_priority: sourcePriority,
     candidate_score: candidateScore,
     status: "pending",
     opportunity: {
       school_slug: schoolSlug,
+      source_priority: sourcePriority,
       title: cleanTitle(title),
       description: buildDescription(descriptionText || fullText || text),
       category,
@@ -1006,6 +1142,7 @@ export function parseEmailToOpportunityCandidate(email, options = {}) {
     organisation: inferOrganisation(email),
     schoolSlug: options.schoolSlug || "nus",
     defaultCategory: options.defaultCategory || "other",
+    sourcePriority: options.sourcePriority ?? 99,
     requiresNusStudentEligibility: options.requiresNusStudentEligibility ?? true,
     trustedForNusStudents: options.trustedForNusStudents || false,
   });
@@ -1031,10 +1168,11 @@ export function parseWebDocumentToOpportunityCandidate(document) {
     organisation: document.sourceName,
     schoolSlug: document.school || "nus",
     defaultCategory: document.defaultCategory || "other",
+    sourcePriority: document.sourcePriority ?? 99,
     scoreBoost: document.sourceTrustBoost || 0,
     requiresNusStudentEligibility: document.requiresNusStudentEligibility ?? true,
     trustedForNusStudents: document.trustedForNusStudents || false,
-    minScore: 3,
+    minScore: document.minScore ?? 5,
   });
 }
 

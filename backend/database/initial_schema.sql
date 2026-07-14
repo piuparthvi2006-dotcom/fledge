@@ -21,6 +21,7 @@ create table public.profiles (
 create table public.opportunities (
   id uuid primary key default gen_random_uuid(),
   school_slug text not null default 'nus',
+  source_priority integer not null default 99,
 
   title text not null,
   description text not null,
@@ -34,6 +35,7 @@ create table public.opportunities (
       'summer_programme',
       'winter_programme',
       'volunteer',
+      'community',
       'mentorship',
       'networking',
       'entrepreneurship',
@@ -81,6 +83,7 @@ create table public.opportunity_candidates (
   raw_subject text,
   raw_sender text,
   received_at timestamptz,
+  source_priority integer not null default 99,
   candidate_score integer not null default 0,
   status text not null default 'pending' check (
     status in ('pending', 'approved', 'rejected')
@@ -204,6 +207,7 @@ insert into public.opportunities (
   title,
   description,
   category,
+  source_priority,
   organisation,
   source_url,
   eligibility,
@@ -219,6 +223,7 @@ values
   'Software Engineering Internship',
   'A practical internship for students interested in software development, web applications, backend systems, and real-world engineering projects.',
   'internship',
+  3,
   'Tech Career Office',
   'https://example.com/software-engineering-internship',
   'Basic programming knowledge recommended.',
@@ -233,6 +238,7 @@ values
   'University Innovation Competition',
   'A student competition where individuals or teams propose innovative solutions to real-world problems.',
   'competition',
+  3,
   'Innovation Centre',
   'https://example.com/university-innovation-competition',
   'Open to all students.',
@@ -247,6 +253,7 @@ values
   'AI Research Assistant Programme',
   'A research opportunity for students interested in artificial intelligence, machine learning, data analysis, and academic research.',
   'research',
+  1,
   'School of Computing',
   'https://example.com/ai-research-assistant-programme',
   'Basic Python knowledge recommended.',
@@ -261,6 +268,7 @@ values
   'Global Exchange Information Session',
   'An information session about overseas exchange programmes, eligibility, application timelines, partner universities, and scholarship options.',
   'exchange',
+  1,
   'International Office',
   'https://example.com/global-exchange-information-session',
   'Recommended for year 1 and year 2 students.',
@@ -275,6 +283,7 @@ values
   'Summer Entrepreneurship Programme',
   'A summer programme for students who want to develop startup ideas, learn business validation, and pitch ideas to mentors.',
   'summer_programme',
+  1,
   'Entrepreneurship Centre',
   'https://example.com/summer-entrepreneurship-programme',
   'Open to students interested in startups, innovation, or business.',
@@ -289,6 +298,7 @@ values
   'Winter Data Science Bootcamp',
   'A winter programme teaching students basic data analysis, Python, data visualization, and introductory machine learning concepts.',
   'winter_programme',
+  2,
   'Data Science Club',
   'https://example.com/winter-data-science-bootcamp',
   'No prior data science experience required.',
@@ -302,7 +312,8 @@ values
 (
   'Community Volunteer Programme',
   'A volunteering opportunity where students support local community projects, social impact initiatives, and charity events.',
-  'volunteer',
+  'community',
+  1,
   'Student Volunteer Office',
   'https://example.com/community-volunteer-programme',
   'Open to all students.',
@@ -317,6 +328,7 @@ values
   'Career Mentorship Programme',
   'A mentorship programme that connects students with seniors, alumni, and industry professionals for academic and career guidance.',
   'mentorship',
+  1,
   'Career Development Office',
   'https://example.com/career-mentorship-programme',
   'Open to students seeking academic or career advice.',
@@ -331,6 +343,7 @@ values
   'Startup Networking Night',
   'A networking event where students can meet startup founders, investors, alumni, and entrepreneurship mentors.',
   'networking',
+  1,
   'Entrepreneurship Centre',
   'https://example.com/startup-networking-night',
   'Open to all students.',
@@ -345,6 +358,7 @@ values
   'Student Founder Incubator',
   'An entrepreneurship programme for students who want to build, validate, and test early-stage startup ideas.',
   'entrepreneurship',
+  1,
   'University Incubator',
   'https://example.com/student-founder-incubator',
   'Students should have a startup idea or strong interest in entrepreneurship.',
@@ -359,6 +373,7 @@ values
   'Open Student Opportunity',
   'A general opportunity for students that does not fit into the main categories.',
   'other',
+  1,
   'Student Affairs Office',
   'https://example.com/open-student-opportunity',
   'Open to all students.',
@@ -375,6 +390,9 @@ on public.opportunities(category);
 
 create index opportunities_school_slug_idx
 on public.opportunities(school_slug);
+
+create index opportunities_source_priority_idx
+on public.opportunities(source_priority);
 
 create index opportunities_delivery_mode_idx
 on public.opportunities(delivery_mode);
@@ -396,6 +414,9 @@ on public.opportunity_candidates(status);
 
 create index opportunity_candidates_school_slug_idx
 on public.opportunity_candidates(school_slug);
+
+create index opportunity_candidates_source_priority_idx
+on public.opportunity_candidates(source_priority);
 
 create index opportunity_candidates_score_idx
 on public.opportunity_candidates(candidate_score);
