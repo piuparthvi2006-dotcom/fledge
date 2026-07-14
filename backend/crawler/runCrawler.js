@@ -1,5 +1,9 @@
 import { loadLocalEnv, getRequiredEnv } from "./env.js";
-import { crawlerSources, OUTLOOK_SEARCH_KEYWORDS } from "./sources.js";
+import {
+  crawlerSources,
+  OUTLOOK_SEARCH_KEYWORDS,
+  SOURCE_PRIORITIES,
+} from "./sources.js";
 import {
   getAccessTokenFromRefreshToken,
   listRecentMessages,
@@ -103,7 +107,7 @@ async function getOutlookMessages() {
     messagesById.set(message.id, message);
   }
 
-  for (const keyword of OUTLOOK_SEARCH_KEYWORDS.slice(0, 8)) {
+  for (const keyword of OUTLOOK_SEARCH_KEYWORDS.slice(0, 18)) {
     const searchResults = await searchMessages(accessToken, keyword, { top: 15 });
     for (const message of searchResults) {
       messagesById.set(message.id, message);
@@ -113,8 +117,17 @@ async function getOutlookMessages() {
   return [...messagesById.values()];
 }
 
-async function getPublicWebDocuments() {
-  return fetchPublicWebDocuments(crawlerSources);
+function isNusWebSource(source) {
+  return (
+    source.type === "public_web" &&
+    source.sourcePriority === SOURCE_PRIORITIES.NUS_WEBSITE
+  );
+}
+
+async function getPublicWebDocuments({ nusOnly = false } = {}) {
+  const sources = nusOnly ? crawlerSources.filter(isNusWebSource) : crawlerSources;
+
+  return fetchPublicWebDocuments(sources);
 }
 
 function toCandidateRows(candidates) {
@@ -135,7 +148,8 @@ function toCandidateRows(candidates) {
 
 async function main() {
   const useOutlook = getFlag("--outlook");
-  const usePublicWeb = getFlag("--web") || getFlag("--nus-web");
+  const useNusWeb = getFlag("--nus-web");
+  const usePublicWeb = getFlag("--web") || useNusWeb;
   const useAllSources = getFlag("--all");
   const saveToSupabase = getFlag("--save");
   const debug = getFlag("--debug");
@@ -156,7 +170,9 @@ async function main() {
   }
 
   if (usePublicWeb || useAllSources) {
-    const webDocuments = await getPublicWebDocuments();
+    const webDocuments = await getPublicWebDocuments({
+      nusOnly: useNusWeb && !getFlag("--web") && !useAllSources,
+    });
     scannedCount += webDocuments.length;
 
     if (debug) {

@@ -30,6 +30,7 @@ create table public.opportunities (
     category in (
       'internship',
       'competition',
+      'scholarship',
       'research',
       'exchange',
       'summer_programme',
@@ -298,7 +299,7 @@ values
   'Winter Data Science Bootcamp',
   'A winter programme teaching students basic data analysis, Python, data visualization, and introductory machine learning concepts.',
   'winter_programme',
-  2,
+  1,
   'Data Science Club',
   'https://example.com/winter-data-science-bootcamp',
   'No prior data science experience required.',

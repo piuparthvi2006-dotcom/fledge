@@ -99,7 +99,7 @@ const opportunities = [
   {
     id: 6,
     title: "MAS Financial Scholarship",
-    category: "other",
+    category: "scholarship",
     source_priority: 3,
     organisation: "Monetary Authority of Singapore",
     description: "Scholarship for finance-oriented students with strong academics.",
@@ -173,6 +173,7 @@ export const CATEGORIES = [
   { key: "all", label: "All" },
   { key: "internship", label: "Internships" },
   { key: "competition", label: "Competitions" },
+  { key: "scholarship", label: "Scholarships" },
   { key: "research", label: "Research" },
   { key: "exchange", label: "Exchange" },
   { key: "summer_programme", label: "Summer Programmes" },

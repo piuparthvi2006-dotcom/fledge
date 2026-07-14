@@ -1,11 +1,29 @@
 const CATEGORY_RULES = [
   {
     category: "internship",
-    keywords: ["internship", "intern", "traineeship", "attachment"],
+    keywords: [
+      "internship",
+      "intern",
+      "traineeship",
+      "industrial attachment",
+      "work attachment",
+    ],
   },
   {
     category: "competition",
     keywords: ["competition", "hackathon", "challenge", "case competition", "contest"],
+  },
+  {
+    category: "scholarship",
+    keywords: [
+      "scholarship",
+      "scholarships",
+      "bursary",
+      "bursaries",
+      "financial aid",
+      "study award",
+      "study awards",
+    ],
   },
   {
     category: "volunteer",
@@ -34,11 +52,31 @@ const CATEGORY_RULES = [
   },
   {
     category: "research",
-    keywords: ["research", "research assistant", "urop", "lab assistant"],
+    keywords: [
+      "research",
+      "research assistant",
+      "research attachment",
+      "research attachments",
+      "urop",
+      "lab assistant",
+    ],
   },
   {
     category: "exchange",
-    keywords: ["exchange", "study abroad", "overseas exchange", "semester abroad"],
+    keywords: [
+      "exchange",
+      "engagement and enrichment",
+      "overseas exchange",
+      "semester abroad",
+      "sep",
+      "steer",
+      "student exchange",
+      "student exchange programme",
+      "student exchange program",
+      "study abroad",
+      "study trip",
+      "study trips",
+    ],
   },
   {
     category: "summer_programme",
@@ -58,7 +96,18 @@ const CATEGORY_RULES = [
   },
   {
     category: "entrepreneurship",
-    keywords: ["startup", "entrepreneurship", "incubator", "accelerator", "founder"],
+    keywords: [
+      "startup",
+      "start-up",
+      "entrepreneurial",
+      "entrepreneurship",
+      "incubator",
+      "accelerator",
+      "founder",
+      "noc",
+      "nus overseas colleges",
+      "overseas colleges",
+    ],
   },
 ];
 
@@ -592,6 +641,33 @@ const MAJOR_RULES = [
 const MONTHS =
   "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
 
+const MONTH_NUMBERS = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+};
+
 function normalizeWhitespace(text) {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -636,7 +712,7 @@ function getEmailBodyText(email) {
 }
 
 function keywordMatches(text, keyword) {
-  if (keyword.length <= 3 && /^[a-z0-9]+$/i.test(keyword)) {
+  if (/^[a-z0-9]+$/i.test(keyword)) {
     return new RegExp(`\\b${escapeRegExp(keyword)}\\b`).test(text);
   }
 
@@ -886,9 +962,15 @@ export function scoreOpportunityText(text) {
     "registration open",
     "deadline",
     "internship",
+    "research attachment",
     "research assistant",
     "exchange programme",
+    "student exchange programme",
     "summer programme",
+    "winter programme",
+    "study trips",
+    "steer",
+    "noc",
     "competition",
     "hackathon",
   ];
@@ -918,7 +1000,14 @@ export function scoreOpportunityText(text) {
   return score;
 }
 
-function detectCategory(text, fallbackCategory = "other") {
+function detectCategory(text, fallbackCategory = "other", priorityText = "") {
+  const lowerPriorityText = priorityText.toLowerCase();
+  if (lowerPriorityText) {
+    for (const rule of CATEGORY_RULES) {
+      if (includesAny(lowerPriorityText, rule.keywords)) return rule.category;
+    }
+  }
+
   const lowerText = text.toLowerCase();
 
   for (const rule of CATEGORY_RULES) {
@@ -928,8 +1017,23 @@ function detectCategory(text, fallbackCategory = "other") {
   return fallbackCategory;
 }
 
-function detectEligibleMajors(text) {
+function detectEligibleMajors(text, { requireExplicitEligibility = false } = {}) {
   const lowerText = text.toLowerCase();
+
+  if (requireExplicitEligibility) {
+    if (/all majors|all disciplines|all faculties|open to all students/i.test(text)) {
+      return [];
+    }
+
+    const eligibilityStatements = text.match(
+      /(?:eligible(?:\s+applicants?)?(?:\s+must be|\s+are)?|open to|only\s+open\s+to|only\s+for|for students\s+(?:from|in))[^.]{0,260}/gi
+    );
+
+    if (!eligibilityStatements) return [];
+
+    return detectEligibleMajors(eligibilityStatements.join(" "));
+  }
+
   const majors = new Set();
 
   for (const rule of MAJOR_RULES) {
@@ -941,7 +1045,7 @@ function detectEligibleMajors(text) {
   return [...majors];
 }
 
-function detectYearRange(text) {
+function detectYearRange(text, { unknownWhenUnstated = false } = {}) {
   const lowerText = text.toLowerCase();
 
   if (/year\s*1\s*(?:-|to|and|&)\s*2/.test(lowerText)) {
@@ -966,7 +1070,9 @@ function detectYearRange(text) {
     return { year_min: 4, year_max: 4 };
   }
 
-  return { year_min: 1, year_max: 4 };
+  return unknownWhenUnstated
+    ? { year_min: null, year_max: null }
+    : { year_min: 1, year_max: 4 };
 }
 
 function detectDeliveryMode(text) {
@@ -1002,6 +1108,26 @@ function detectLocation(text, deliveryMode) {
 }
 
 function extractDeadline(text) {
+  const applicationDeadline = text.match(
+    new RegExp(
+      `application\\s+deadline[:\\s]*((?:${MONTHS})\\s+\\d{1,2},?\\s+\\d{4}|\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4}|\\d{4}-\\d{2}-\\d{2})`,
+      "i"
+    )
+  );
+
+  if (applicationDeadline) {
+    const date = parseDateToIso(applicationDeadline[1]);
+    if (date) return date;
+  }
+
+  const applicationPeriod = extractLabeledValue(text, [
+    "Application Period",
+    "Application Window",
+    "Application Dates",
+  ]);
+  const periodDeadline = extractLastDate(applicationPeriod);
+  if (periodDeadline) return periodDeadline;
+
   const patterns = [
     new RegExp(`(?:deadline|apply by|register by|closes on)[:\\s]*(\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4})`, "i"),
     new RegExp(`(?:deadline|apply by|register by|closes on)[:\\s]*((?:${MONTHS})\\s+\\d{1,2},?\\s+\\d{4})`, "i"),
@@ -1012,11 +1138,102 @@ function extractDeadline(text) {
     const match = text.match(pattern);
     if (!match) continue;
 
-    const date = new Date(match[1]);
-    if (!Number.isNaN(date.valueOf())) return date.toISOString();
+    const date = parseDateToIso(match[1]);
+    if (date) return date;
   }
 
   return null;
+}
+
+const PROGRAMME_FIELD_LABELS = [
+  "Host University Website",
+  "Programme Location",
+  "Programme Dates",
+  "Application Deadline",
+  "Application Period",
+  "Application Window",
+  "Application Dates",
+  "No. of Placements",
+  "Course Information",
+  "Courses Available In",
+  "Eligibility Requirements",
+  "Eligibility Criteria",
+  "Programme Fee",
+  "Financial Aid",
+  "Estimated Cost of Participation",
+  "Application Process",
+];
+
+function extractLabeledValue(text, labels) {
+  for (const label of labels) {
+    const labelPattern = new RegExp(`${escapeRegExp(label)}\\s*:?\\s*`, "i");
+    const labelMatch = labelPattern.exec(text);
+    if (!labelMatch) continue;
+
+    const remainder = text.slice(labelMatch.index + labelMatch[0].length);
+    let endIndex = remainder.length;
+
+    for (const nextLabel of PROGRAMME_FIELD_LABELS) {
+      const nextLabelPattern = new RegExp(
+        `\\b${escapeRegExp(nextLabel)}\\s*:`,
+        "i"
+      );
+      const nextLabelMatch = nextLabelPattern.exec(remainder);
+      if (nextLabelMatch && nextLabelMatch.index < endIndex) {
+        endIndex = nextLabelMatch.index;
+      }
+    }
+
+    return normalizeWhitespace(remainder.slice(0, endIndex))
+      .replace(/^[|:-]+|[|:-]+$/g, "")
+      .trim()
+      .slice(0, 500);
+  }
+
+  return "";
+}
+
+function extractLastDate(text) {
+  if (!text) return null;
+
+  const datePattern = new RegExp(
+    `\\b\\d{1,2}\\s+(?:${MONTHS})(?:\\s+\\d{4})?`,
+    "gi"
+  );
+  const matches = [...text.matchAll(datePattern)].map((match) => match[0]);
+
+  for (let index = matches.length - 1; index >= 0; index -= 1) {
+    const date = parseDateToIso(matches[index]);
+    if (date) return date;
+  }
+
+  return null;
+}
+
+function parseDateToIso(value) {
+  const normalized = value.trim().replace(/(\d)(st|nd|rd|th)\b/gi, "$1");
+  const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
+  }
+
+  const dayFirstMatch = normalized.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  const monthFirstMatch = normalized.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})$/);
+  const match = dayFirstMatch || monthFirstMatch;
+
+  if (!match) return null;
+
+  const [, first, second, year] = match;
+  const day = dayFirstMatch ? Number(first) : Number(second);
+  const monthName = (dayFirstMatch ? second : first).toLowerCase();
+  const month = MONTH_NUMBERS[monthName];
+
+  if (month === undefined) return null;
+
+  const date = new Date(Date.UTC(Number(year), month, day));
+  return Number.isNaN(date.valueOf()) ? null : date.toISOString();
 }
 
 function extractFirstUrl(text) {
@@ -1049,6 +1266,103 @@ function cleanTitle(subject) {
   );
 }
 
+function extractHostOrganisation(title, text) {
+  const explicitHostMatch = text.match(
+    /(?:Host|Partner) University\s*:(?!\s*Website\b)([\s\S]{1,240})/i
+  );
+  if (explicitHostMatch) {
+    const explicitHost = normalizeWhitespace(explicitHostMatch[1]).split(
+      /\b(?:Host University Website|Programme Location|Programme Dates|Application (?:Deadline|Period|Window|Dates))\s*:/i
+    )[0].trim();
+
+    if (explicitHost && !/^https?:\/\//i.test(explicitHost)) {
+      return explicitHost;
+    }
+  }
+
+  const normalisedTitle = cleanTitle(title);
+  const universityOfMatch = normalisedTitle.match(
+    /^(University of [A-Za-z&.' -]+?)(?=\s+(?:\(|School|International|Global|Winter|Summer|Short-Term|Programme|Program|Session)|$)/i
+  );
+  if (universityOfMatch) return universityOfMatch[1].trim();
+
+  const universitySuffixMatch = normalisedTitle.match(
+    /^([A-Z][A-Za-z&.'-]*(?:\s+[A-Z][A-Za-z&.'-]*){0,5}\s+University)\b/
+  );
+  if (universitySuffixMatch) return universitySuffixMatch[1].trim();
+
+  return "";
+}
+
+function extractRequirementSnippets(text) {
+  const patterns = [
+    /NUS(?:'|’)?\s+generic eligibility requirements apply[^.]{0,260}\.?/i,
+    /NUS students should apply[^.]{0,260}\.?/i,
+    /You must apply concurrently[^.]{0,260}\.?/i,
+    /The programme period overlaps[^.]{0,260}\.?/i,
+    /Students must[^.]{0,260}\.?/i,
+  ];
+  const snippets = [];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) snippets.push(normalizeWhitespace(match[0]));
+  }
+
+  return [...new Set(snippets)];
+}
+
+function buildProgrammeDescription({ title, organisation, location, dates, courseInfo }) {
+  const details = [];
+  const host = organisation || "a partner university";
+
+  details.push(`${cleanTitle(title)} at ${host}.`);
+  if (location) details.push(`Location: ${location}.`);
+  if (dates) details.push(`Programme dates: ${dates}.`);
+
+  if (courseInfo && !/^https?:\/\//i.test(courseInfo)) {
+    details.push(`Course information: ${courseInfo.slice(0, 220)}.`);
+  }
+
+  return details.join(" ").slice(0, 700);
+}
+
+function getProgrammeDetailOverrides(document, fallbackEligibility) {
+  if (!document.programmeDetails) return {};
+
+  const location = extractLabeledValue(document.text, ["Programme Location"]);
+  const dates = extractLabeledValue(document.text, ["Programme Dates"]);
+  const courseInfo = extractLabeledValue(document.text, [
+    "Courses Available In",
+    "Course Information",
+  ]);
+  const organisation = extractHostOrganisation(document.title, document.text);
+  const requirements = extractRequirementSnippets(document.text);
+  const deliveryMode = /information on this page is for (?:the )?(?:on-site|onsite|in-person)/i.test(
+    document.text
+  )
+    ? "in_person"
+    : /information on this page is for (?:the )?online/i.test(document.text)
+      ? "online"
+      : undefined;
+
+  return {
+    organisation: organisation || undefined,
+    location: location || undefined,
+    description: buildProgrammeDescription({
+      title: document.title || document.sourceName,
+      organisation,
+      location,
+      dates,
+      courseInfo,
+    }),
+    eligibility: requirements.length ? requirements.join(" ") : fallbackEligibility,
+    deliveryMode,
+    requireExplicitMajorEligibility: true,
+    unknownYearWhenUnstated: true,
+  };
+}
+
 export function parseTextToOpportunityCandidate({
   sourceType,
   sourceId,
@@ -1067,6 +1381,14 @@ export function parseTextToOpportunityCandidate({
   requiresNusStudentEligibility = true,
   trustedForNusStudents = false,
   minScore = 4,
+  organisationOverride,
+  descriptionOverride,
+  eligibilityOverride,
+  locationOverride,
+  deadlineOverride,
+  deliveryModeOverride,
+  requireExplicitMajorEligibility = false,
+  unknownYearWhenUnstated = false,
 }) {
   const text = normalizeWhitespace(
     [title, descriptionText, fullText].filter(Boolean).join(" ")
@@ -1093,9 +1415,9 @@ export function parseTextToOpportunityCandidate({
     return null;
   }
 
-  const category = detectCategory(text, defaultCategory);
-  const deliveryMode = detectDeliveryMode(text);
-  const yearRange = detectYearRange(text);
+  const category = detectCategory(text, defaultCategory, title);
+  const deliveryMode = deliveryModeOverride || detectDeliveryMode(text);
+  const yearRange = detectYearRange(text, { unknownWhenUnstated: unknownYearWhenUnstated });
 
   return {
     school_slug: schoolSlug,
@@ -1112,16 +1434,18 @@ export function parseTextToOpportunityCandidate({
       school_slug: schoolSlug,
       source_priority: sourcePriority,
       title: cleanTitle(title),
-      description: buildDescription(descriptionText || fullText || text),
+      description: descriptionOverride || buildDescription(descriptionText || fullText || text),
       category,
-      organisation,
+      organisation: organisationOverride || organisation,
       source_url: sourceUrl || extractFirstUrl(text),
-      eligibility: eligibilityAssessment.reason,
+      eligibility: eligibilityOverride || eligibilityAssessment.reason,
       ...yearRange,
-      eligible_majors: detectEligibleMajors(text),
+      eligible_majors: detectEligibleMajors(text, {
+        requireExplicitEligibility: requireExplicitMajorEligibility,
+      }),
       delivery_mode: deliveryMode,
-      location: detectLocation(text, deliveryMode),
-      deadline: extractDeadline(text),
+      location: locationOverride || detectLocation(text, deliveryMode),
+      deadline: deadlineOverride || extractDeadline(text),
     },
   };
 }
@@ -1155,6 +1479,11 @@ export function parseEmailsToOpportunityCandidates(emails, options = {}) {
 }
 
 export function parseWebDocumentToOpportunityCandidate(document) {
+  const fallbackEligibility = document.trustedForNusStudents
+    ? "Trusted NUS student source."
+    : "Eligibility is stated on the source page.";
+  const detailOverrides = getProgrammeDetailOverrides(document, fallbackEligibility);
+
   return parseTextToOpportunityCandidate({
     sourceType: "public_web",
     sourceId: document.id,
@@ -1173,6 +1502,14 @@ export function parseWebDocumentToOpportunityCandidate(document) {
     requiresNusStudentEligibility: document.requiresNusStudentEligibility ?? true,
     trustedForNusStudents: document.trustedForNusStudents || false,
     minScore: document.minScore ?? 5,
+    organisationOverride: detailOverrides.organisation,
+    descriptionOverride: detailOverrides.description,
+    eligibilityOverride: detailOverrides.eligibility,
+    locationOverride: detailOverrides.location,
+    deliveryModeOverride: detailOverrides.deliveryMode,
+    requireExplicitMajorEligibility:
+      detailOverrides.requireExplicitMajorEligibility || false,
+    unknownYearWhenUnstated: detailOverrides.unknownYearWhenUnstated || false,
   });
 }
 

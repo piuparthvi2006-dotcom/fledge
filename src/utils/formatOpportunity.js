@@ -1,5 +1,5 @@
 function formatYearTag(yearMin, yearMax) {
-  if (!yearMin || !yearMax) return "👤 All years";
+  if (!yearMin || !yearMax) return "👤 Check requirements";
   if (yearMin === yearMax) return `👤 Year ${yearMin}`;
   return `👤 Year ${yearMin}-${yearMax}`;
 }
@@ -18,6 +18,7 @@ function getCategoryIcon(category) {
   const icons = {
     internship: "💼",
     competition: "⚡",
+    scholarship: "🏅",
     research: "🔬",
     exchange: "✈️",
     summer_programme: "☀️",
@@ -56,11 +57,12 @@ export function formatOpportunity(row) {
     deadline: row.deadline,
     deadlineLabel: formatDeadline(row.deadline),
     icon: getCategoryIcon(row.category),
-    badge: "Open to all",
+    badge: row.eligibility ? "Requirements listed" : "Open to all",
     source_priority: row.source_priority ?? 99,
 
     year_min: row.year_min,
     year_max: row.year_max,
     eligible_majors: row.eligible_majors || [],
+    eligibility: row.eligibility || "",
   };
 }

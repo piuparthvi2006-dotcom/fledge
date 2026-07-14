@@ -15,6 +15,7 @@
     "crawl:all": "node backend/crawler/runCrawler.js --all"
   },
   "dependencies": {
+    "pdf-parse": "^2.4.5",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.18.0"

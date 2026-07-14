@@ -1,3 +1,5 @@
+import { PDFParse } from "pdf-parse";
+
 const PUBLIC_WEB_LINK_KEYWORDS = [
   "apply",
   "application",
@@ -17,12 +19,22 @@ const PUBLIC_WEB_LINK_KEYWORDS = [
   "hackathon",
   "internship",
   "internships",
+  "i-sp-application-guide",
+  "noc",
+  "overseas colleges",
+  "partner universities",
+  "partner-universities",
   "research attachment",
   "research attachments",
   "research internship",
   "scholarship",
   "scholarships",
+  "sep",
+  "special-global-programmes",
+  "steer",
   "student-exchange",
+  "study trip",
+  "study trips",
   "summer",
   "tech-up",
   "undergraduate programme",
@@ -49,12 +61,15 @@ const PUBLIC_WEB_EXCLUDED_PATH_PARTS = [
 const PUBLIC_WEB_EXCLUDED_FILE_EXTENSIONS = [
   ".doc",
   ".docx",
-  ".pdf",
   ".ppt",
   ".pptx",
   ".xls",
   ".xlsx",
 ];
+
+function isPdfUrl(url) {
+  return new URL(url).pathname.toLowerCase().endsWith(".pdf");
+}
 
 function decodeHtmlEntities(text) {
   return text
@@ -118,9 +133,11 @@ function isAllowedHost(url, allowedHosts = []) {
   });
 }
 
-function isExcludedCrawlerUrl(url) {
+function isExcludedCrawlerUrl(url, { allowPdf = false } = {}) {
   const { pathname } = new URL(url);
   const normalizedPath = pathname.toLowerCase();
+
+  if (isPdfUrl(url) && !allowPdf) return true;
 
   if (
     PUBLIC_WEB_EXCLUDED_FILE_EXTENSIONS.some((extension) =>
@@ -135,7 +152,7 @@ function isExcludedCrawlerUrl(url) {
   );
 }
 
-function extractLinks(html, baseUrl, allowedHosts) {
+function extractLinks(html, baseUrl, allowedHosts, { allowPdf = false } = {}) {
   const links = [];
   const seenUrls = new Set();
   const linkPattern = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
@@ -147,7 +164,7 @@ function extractLinks(html, baseUrl, allowedHosts) {
       const text = stripHtml(match[2]);
 
       if (!text || !isAllowedHost(url, allowedHosts)) continue;
-      if (isExcludedCrawlerUrl(url)) continue;
+      if (isExcludedCrawlerUrl(url, { allowPdf })) continue;
       if (seenUrls.has(url)) continue;
 
       seenUrls.add(url);
@@ -160,8 +177,8 @@ function extractLinks(html, baseUrl, allowedHosts) {
   return links;
 }
 
-function isLikelyOpportunityLink(link) {
-  if (isExcludedCrawlerUrl(link.url)) return false;
+function isLikelyOpportunityLink(link, { allowPdf = false } = {}) {
+  if (isExcludedCrawlerUrl(link.url, { allowPdf })) return false;
 
   const haystack = `${link.text} ${link.url}`.toLowerCase();
   return PUBLIC_WEB_LINK_KEYWORDS.some((keyword) => haystack.includes(keyword));
@@ -191,6 +208,37 @@ async function fetchHtml(url) {
   return html;
 }
 
+async function fetchPdfText(url) {
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (compatible; FledgeCrawler/0.1; +https://fledge.example)",
+      Accept: "application/pdf",
+      "Accept-Language": "en-SG,en;q=0.9",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${response.status}`);
+  }
+
+  const data = new Uint8Array(await response.arrayBuffer());
+  const firstBytes = new TextDecoder().decode(data.slice(0, 5));
+
+  if (firstBytes !== "%PDF-") {
+    throw new Error(`Expected a PDF document: ${url}`);
+  }
+
+  const parser = new PDFParse({ data });
+
+  try {
+    const result = await parser.getText();
+    return normalizeWhitespace(result.text);
+  } finally {
+    await parser.destroy();
+  }
+}
+
 function createWebDocument(source, url, html, fallbackTitle) {
   const title = extractTitle(html, fallbackTitle);
   const text = stripHtml(html);
@@ -216,14 +264,51 @@ function createWebDocument(source, url, html, fallbackTitle) {
   };
 }
 
+function createPdfDocument(source, url, text, fallbackTitle) {
+  const title = normalizeWhitespace(fallbackTitle || source.name);
+
+  return {
+    id: `${source.id}:${normalizeUrl(url)}`,
+    school: source.school,
+    sourceId: source.id,
+    sourceName: source.name,
+    url: normalizeUrl(url),
+    title,
+    summary: text.slice(0, 700),
+    text,
+    documentFormat: "pdf",
+    programmeDetails: source.programmeDetails || false,
+    defaultCategory: source.defaultCategory,
+    minScore: source.minScore,
+    sourcePriority: source.sourcePriority ?? 99,
+    sourceTrustBoost: source.sourceTrustBoost ?? 0,
+    targetAudience: source.targetAudience,
+    requiresNusStudentEligibility: source.requiresNusStudentEligibility ?? true,
+    trustedForNusStudents: source.trustedForNusStudents || false,
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+function acceptsLinkedDocumentType(source, url) {
+  const allowedTypes = source.linkedDocumentTypes;
+
+  if (!allowedTypes?.length) return true;
+
+  return allowedTypes.includes(isPdfUrl(url) ? "pdf" : "html");
+}
+
 export async function fetchPublicWebSource(source) {
   const rootUrl = normalizeUrl(source.url);
   const rootHtml = await fetchHtml(rootUrl);
   const seenUrls = new Set([rootUrl]);
-  const documents = [createWebDocument(source, rootUrl, rootHtml, source.name)];
+  const documents = source.createRootDocument === false
+    ? []
+    : [createWebDocument(source, rootUrl, rootHtml, source.name)];
+  const allowPdf = source.linkedDocumentTypes?.includes("pdf") || false;
 
-  const relevantLinks = extractLinks(rootHtml, rootUrl, source.allowedHosts)
-    .filter(isLikelyOpportunityLink)
+  const relevantLinks = extractLinks(rootHtml, rootUrl, source.allowedHosts, { allowPdf })
+    .filter((link) => acceptsLinkedDocumentType(source, link.url))
+    .filter((link) => isLikelyOpportunityLink(link, { allowPdf }))
     .filter((link) => !seenUrls.has(link.url))
     .slice(0, source.maxLinkedPages ?? 4);
 
@@ -231,9 +316,15 @@ export async function fetchPublicWebSource(source) {
     try {
       if (seenUrls.has(link.url)) continue;
 
-      const linkedHtml = await fetchHtml(link.url);
       seenUrls.add(link.url);
-      documents.push(createWebDocument(source, link.url, linkedHtml, link.text));
+
+      if (isPdfUrl(link.url)) {
+        const pdfText = await fetchPdfText(link.url);
+        documents.push(createPdfDocument(source, link.url, pdfText, link.text));
+      } else {
+        const linkedHtml = await fetchHtml(link.url);
+        documents.push(createWebDocument(source, link.url, linkedHtml, link.text));
+      }
     } catch (error) {
       console.warn(`Skipping linked page: ${error.message}`);
     }
