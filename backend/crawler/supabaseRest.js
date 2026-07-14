@@ -5,26 +5,55 @@ function getSupabaseUrl(tableName) {
   return `${baseUrl}/rest/v1/${tableName}`;
 }
 
-export async function insertRows(tableName, rows) {
-  if (!rows.length) return [];
-
+function getSupabaseHeaders({ prefer } = {}) {
   const serviceRoleKey = getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY");
-  const response = await fetch(getSupabaseUrl(tableName), {
-    method: "POST",
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify(rows),
-  });
 
+  return {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    "Content-Type": "application/json",
+    ...(prefer ? { Prefer: prefer } : {}),
+  };
+}
+
+async function readResponse(response, action) {
   const body = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(`Supabase insert failed: ${response.status} ${JSON.stringify(body)}`);
+    throw new Error(`Supabase ${action} failed: ${response.status} ${JSON.stringify(body)}`);
   }
 
   return body;
+}
+
+export async function insertRows(tableName, rows) {
+  if (!rows.length) return [];
+
+  const response = await fetch(getSupabaseUrl(tableName), {
+    method: "POST",
+    headers: getSupabaseHeaders({ prefer: "return=representation" }),
+    body: JSON.stringify(rows),
+  });
+
+  return readResponse(response, "insert");
+}
+
+export async function selectRows(tableName, query = {}) {
+  const searchParams = new URLSearchParams(query);
+  const response = await fetch(`${getSupabaseUrl(tableName)}?${searchParams}`, {
+    headers: getSupabaseHeaders(),
+  });
+
+  return readResponse(response, "select");
+}
+
+export async function callRpc(functionName, parameters = {}) {
+  const baseUrl = getRequiredEnv("SUPABASE_URL").replace(/\/$/, "");
+  const response = await fetch(`${baseUrl}/rest/v1/rpc/${functionName}`, {
+    method: "POST",
+    headers: getSupabaseHeaders({ prefer: "return=representation" }),
+    body: JSON.stringify(parameters),
+  });
+
+  return readResponse(response, "RPC call");
 }

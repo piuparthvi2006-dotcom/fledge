@@ -62,12 +62,26 @@ function getFlag(name) {
   return process.argv.includes(name);
 }
 
+function getCandidateDeadlineTime(candidate) {
+  const opportunity = candidate.opportunity;
+  const deadline = opportunity.deadline;
+
+  if (!deadline) return Number.POSITIVE_INFINITY;
+
+  // A date-only deadline has no published cut-off time. Keep it visible until
+  // the end of that Singapore calendar day instead of dropping it at UTC midnight.
+  if (!opportunity.deadline_has_time || !opportunity.deadline_source_timezone) {
+    const dateOnly = deadline.slice(0, 10);
+    return new Date(`${dateOnly}T23:59:59.999+08:00`).getTime();
+  }
+
+  return new Date(deadline).getTime();
+}
+
 function isActiveCandidate(candidate) {
-  const deadline = candidate.opportunity.deadline;
+  const deadlineTime = getCandidateDeadlineTime(candidate);
 
-  if (!deadline) return true;
-
-  return new Date(deadline) >= new Date();
+  return deadlineTime === Number.POSITIVE_INFINITY || deadlineTime >= Date.now();
 }
 
 function getSourceByType(type) {
@@ -76,12 +90,6 @@ function getSourceByType(type) {
 
 function getCandidatePriority(candidate) {
   return candidate.source_priority ?? candidate.opportunity?.source_priority ?? 99;
-}
-
-function getCandidateDeadlineTime(candidate) {
-  const deadline = candidate.opportunity.deadline;
-
-  return deadline ? new Date(deadline).getTime() : Number.POSITIVE_INFINITY;
 }
 
 function compareCandidates(a, b) {

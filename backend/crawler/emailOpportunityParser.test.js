@@ -41,8 +41,60 @@ test("parses an NUS partner winter-programme PDF as a specific opportunity", () 
   assert.equal(candidate.opportunity.location, "Seoul, South Korea");
   assert.equal(candidate.opportunity.delivery_mode, "in_person");
   assert.equal(candidate.opportunity.deadline, "2026-10-18T00:00:00.000Z");
+  assert.equal(candidate.opportunity.deadline_has_time, false);
+  assert.equal(candidate.opportunity.deadline_source_timezone, null);
   assert.equal(candidate.opportunity.year_min, null);
   assert.equal(candidate.opportunity.year_max, null);
   assert.deepEqual(candidate.opportunity.eligible_majors, []);
   assert.match(candidate.opportunity.eligibility, /generic eligibility requirements/i);
+});
+
+test("converts an explicitly zoned deadline into a UTC instant", () => {
+  const candidate = parseWebDocumentToOpportunityCandidate({
+    id: "external-programme",
+    school: "nus",
+    sourceId: "external-programme",
+    sourceName: "Example University",
+    url: "https://example.edu/programme",
+    title: "International Design Competition",
+    summary: "",
+    text: "Application deadline: October 18, 2026 at 11:59 PM EDT. Open to all students.",
+    defaultCategory: "competition",
+    minScore: 3,
+    sourcePriority: 3,
+    sourceTrustBoost: 0,
+    requiresNusStudentEligibility: true,
+    trustedForNusStudents: true,
+    fetchedAt: "2026-07-14T00:00:00.000Z",
+  });
+
+  assert.ok(candidate);
+  assert.equal(candidate.opportunity.deadline, "2026-10-19T03:59:00.000Z");
+  assert.equal(candidate.opportunity.deadline_has_time, true);
+  assert.equal(candidate.opportunity.deadline_source_timezone, "EDT");
+});
+
+test("does not assume Singapore time when the source omits a timezone", () => {
+  const candidate = parseWebDocumentToOpportunityCandidate({
+    id: "timezone-not-stated",
+    school: "nus",
+    sourceId: "timezone-not-stated",
+    sourceName: "Example University",
+    url: "https://example.edu/programme",
+    title: "Global Student Competition",
+    summary: "",
+    text: "Deadline: 18 October 2026 at 11:59 PM. Open to all students.",
+    defaultCategory: "competition",
+    minScore: 3,
+    sourcePriority: 3,
+    sourceTrustBoost: 0,
+    requiresNusStudentEligibility: true,
+    trustedForNusStudents: true,
+    fetchedAt: "2026-07-14T00:00:00.000Z",
+  });
+
+  assert.ok(candidate);
+  assert.equal(candidate.opportunity.deadline, "2026-10-18T00:00:00.000Z");
+  assert.equal(candidate.opportunity.deadline_has_time, true);
+  assert.equal(candidate.opportunity.deadline_source_timezone, null);
 });

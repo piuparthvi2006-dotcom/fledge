@@ -668,6 +668,29 @@ const MONTH_NUMBERS = {
   december: 11,
 };
 
+// Abbreviations such as CST are intentionally excluded because they can mean
+// different places. A deadline is converted only when its timezone is clear.
+const DEADLINE_TIME_ZONES = [
+  { pattern: /\bSGT\b|Singapore Standard Time/i, label: "SGT", offsetMinutes: 480 },
+  { pattern: /\bKST\b|Korea Standard Time/i, label: "KST", offsetMinutes: 540 },
+  { pattern: /\bJST\b|Japan Standard Time/i, label: "JST", offsetMinutes: 540 },
+  { pattern: /\bHKT\b|Hong Kong Time/i, label: "HKT", offsetMinutes: 480 },
+  { pattern: /China Standard Time/i, label: "China Standard Time", offsetMinutes: 480 },
+  { pattern: /\bIST\b|India Standard Time/i, label: "IST", offsetMinutes: 330 },
+  { pattern: /\bAEST\b|Australian Eastern Standard Time/i, label: "AEST", offsetMinutes: 600 },
+  { pattern: /\bAEDT\b|Australian Eastern Daylight Time/i, label: "AEDT", offsetMinutes: 660 },
+  { pattern: /\bPST\b|Pacific Standard Time/i, label: "PST", offsetMinutes: -480 },
+  { pattern: /\bPDT\b|Pacific Daylight Time/i, label: "PDT", offsetMinutes: -420 },
+  { pattern: /\bMST\b|Mountain Standard Time/i, label: "MST", offsetMinutes: -420 },
+  { pattern: /\bMDT\b|Mountain Daylight Time/i, label: "MDT", offsetMinutes: -360 },
+  { pattern: /\bEST\b|Eastern Standard Time/i, label: "EST", offsetMinutes: -300 },
+  { pattern: /\bEDT\b|Eastern Daylight Time/i, label: "EDT", offsetMinutes: -240 },
+  { pattern: /\bBST\b|British Summer Time/i, label: "BST", offsetMinutes: 60 },
+  { pattern: /\bCET\b|Central European Time/i, label: "CET", offsetMinutes: 60 },
+  { pattern: /\bCEST\b|Central European Summer Time/i, label: "CEST", offsetMinutes: 120 },
+  { pattern: /\bUTC\b|\bGMT\b/, label: "UTC", offsetMinutes: 0 },
+];
+
 function normalizeWhitespace(text) {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -1108,41 +1131,7 @@ function detectLocation(text, deliveryMode) {
 }
 
 function extractDeadline(text) {
-  const applicationDeadline = text.match(
-    new RegExp(
-      `application\\s+deadline[:\\s]*((?:${MONTHS})\\s+\\d{1,2},?\\s+\\d{4}|\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4}|\\d{4}-\\d{2}-\\d{2})`,
-      "i"
-    )
-  );
-
-  if (applicationDeadline) {
-    const date = parseDateToIso(applicationDeadline[1]);
-    if (date) return date;
-  }
-
-  const applicationPeriod = extractLabeledValue(text, [
-    "Application Period",
-    "Application Window",
-    "Application Dates",
-  ]);
-  const periodDeadline = extractLastDate(applicationPeriod);
-  if (periodDeadline) return periodDeadline;
-
-  const patterns = [
-    new RegExp(`(?:deadline|apply by|register by|closes on)[:\\s]*(\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4})`, "i"),
-    new RegExp(`(?:deadline|apply by|register by|closes on)[:\\s]*((?:${MONTHS})\\s+\\d{1,2},?\\s+\\d{4})`, "i"),
-    /(?:deadline|apply by|register by|closes on)[:\s]*(\d{4}-\d{2}-\d{2})/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (!match) continue;
-
-    const date = parseDateToIso(match[1]);
-    if (date) return date;
-  }
-
-  return null;
+  return extractDeadlineDetails(text).deadline;
 }
 
 const PROGRAMME_FIELD_LABELS = [
@@ -1193,30 +1182,161 @@ function extractLabeledValue(text, labels) {
   return "";
 }
 
-function extractLastDate(text) {
-  if (!text) return null;
+function extractDeadlineDetails(text) {
+  const directDeadline = extractLabeledValue(text, [
+    "Application Deadline",
+    "Deadline",
+    "Apply By",
+    "Register By",
+    "Closes On",
+  ]);
+  const applicationPeriod = extractLabeledValue(text, [
+    "Application Period",
+    "Application Window",
+    "Application Dates",
+  ]);
+  const deadlineText = directDeadline || applicationPeriod;
 
-  const datePattern = new RegExp(
-    `\\b\\d{1,2}\\s+(?:${MONTHS})(?:\\s+\\d{4})?`,
-    "gi"
-  );
-  const matches = [...text.matchAll(datePattern)].map((match) => match[0]);
-
-  for (let index = matches.length - 1; index >= 0; index -= 1) {
-    const date = parseDateToIso(matches[index]);
-    if (date) return date;
+  if (!deadlineText) {
+    return {
+      deadline: null,
+      deadline_has_time: false,
+      deadline_source_timezone: null,
+      deadline_source_text: null,
+    };
   }
 
-  return null;
+  const deadlineSourceText = formatDeadlineSourceText(deadlineText);
+  const parsed = parseDeadlineText(deadlineSourceText, {
+    useLastDate: Boolean(applicationPeriod && !directDeadline),
+  });
+
+  return {
+    deadline: parsed?.deadline || null,
+    deadline_has_time: parsed?.hasTime || false,
+    deadline_source_timezone: parsed?.sourceTimezone || null,
+    deadline_source_text: deadlineSourceText,
+  };
 }
 
-function parseDateToIso(value) {
+function formatDeadlineSourceText(text) {
+  const normalized = normalizeWhitespace(text).replace(/\b([ap])\./gi, "$1");
+  const firstSentence = normalized.match(/^(.+?)(?=[.!?](?:\s|$)|$)/);
+
+  return (firstSentence?.[1] || normalized).trim().slice(0, 240);
+}
+
+function parseDeadlineText(text, { useLastDate = false } = {}) {
+  const isoTimestampMatch = text.match(
+    /\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})\b/i
+  );
+  if (isoTimestampMatch) {
+    const date = new Date(isoTimestampMatch[0]);
+    if (!Number.isNaN(date.valueOf())) {
+      return {
+        deadline: date.toISOString(),
+        hasTime: true,
+        sourceTimezone: isoTimestampMatch[0].endsWith("Z") ? "UTC" : "UTC offset",
+      };
+    }
+  }
+
+  const dateMatches = findCalendarDateMatches(text);
+  const selectedDate = useLastDate
+    ? [...dateMatches].reverse().find((dateMatch) => parseCalendarDate(dateMatch.value))
+    : dateMatches.find((dateMatch) => parseCalendarDate(dateMatch.value));
+  const calendarDate = selectedDate && parseCalendarDate(selectedDate.value);
+
+  if (!calendarDate) return null;
+
+  const time = extractClockTime(text.slice(selectedDate.index + selectedDate.value.length));
+  const sourceTimezone = extractDeadlineTimeZone(text);
+
+  if (time && sourceTimezone) {
+    return {
+      deadline: new Date(
+        Date.UTC(
+          calendarDate.year,
+          calendarDate.month,
+          calendarDate.day,
+          time.hour,
+          time.minute,
+          time.second
+        ) - sourceTimezone.offsetMinutes * 60 * 1000
+      ).toISOString(),
+      hasTime: true,
+      sourceTimezone: sourceTimezone.label,
+    };
+  }
+
+  return {
+    deadline: calendarDateToIso(calendarDate),
+    hasTime: Boolean(time),
+    sourceTimezone: null,
+  };
+}
+
+function findCalendarDateMatches(text) {
+  const patterns = [
+    /\b\d{4}-\d{2}-\d{2}\b/g,
+    new RegExp(`\\b\\d{1,2}\\s+(?:${MONTHS})\\s+\\d{4}\\b`, "gi"),
+    new RegExp(`\\b(?:${MONTHS})\\s+\\d{1,2},?\\s+\\d{4}\\b`, "gi"),
+  ];
+  const matches = [];
+
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      matches.push({ value: match[0], index: match.index });
+    }
+  }
+
+  return matches.sort((a, b) => a.index - b.index);
+}
+
+function extractClockTime(text) {
+  const match = text.match(
+    /\b(?:at\s+)?(\d{1,2})(?::|\.)(\d{2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?\b/i
+  );
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const second = Number(match[3] || 0);
+  const meridiem = match[4]?.replace(/\./g, "").toLowerCase();
+
+  if (minute > 59 || second > 59 || hour > 23) return null;
+  if (meridiem === "pm" && hour < 12) hour += 12;
+  if (meridiem === "am" && hour === 12) hour = 0;
+
+  return { hour, minute, second };
+}
+
+function extractDeadlineTimeZone(text) {
+  const offsetMatch = text.match(/\b(?:UTC|GMT)\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?\b/i);
+  if (offsetMatch) {
+    const [, sign, hours, minutes = "0"] = offsetMatch;
+    const offsetMinutes = Number(hours) * 60 + Number(minutes);
+
+    return {
+      label: `UTC${sign}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
+      offsetMinutes: sign === "+" ? offsetMinutes : -offsetMinutes,
+    };
+  }
+
+  return DEADLINE_TIME_ZONES.find((timeZone) => timeZone.pattern.test(text)) || null;
+}
+
+function parseCalendarDate(value) {
   const normalized = value.trim().replace(/(\d)(st|nd|rd|th)\b/gi, "$1");
   const isoMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
-    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
+    return {
+      year: Number(year),
+      month: Number(month) - 1,
+      day: Number(day),
+    };
   }
 
   const dayFirstMatch = normalized.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
@@ -1232,7 +1352,11 @@ function parseDateToIso(value) {
 
   if (month === undefined) return null;
 
-  const date = new Date(Date.UTC(Number(year), month, day));
+  return { year: Number(year), month, day };
+}
+
+function calendarDateToIso({ year, month, day }) {
+  const date = new Date(Date.UTC(year, month, day));
   return Number.isNaN(date.valueOf()) ? null : date.toISOString();
 }
 
@@ -1386,6 +1510,9 @@ export function parseTextToOpportunityCandidate({
   eligibilityOverride,
   locationOverride,
   deadlineOverride,
+  deadlineHasTimeOverride,
+  deadlineSourceTimezoneOverride,
+  deadlineSourceTextOverride,
   deliveryModeOverride,
   requireExplicitMajorEligibility = false,
   unknownYearWhenUnstated = false,
@@ -1418,6 +1545,7 @@ export function parseTextToOpportunityCandidate({
   const category = detectCategory(text, defaultCategory, title);
   const deliveryMode = deliveryModeOverride || detectDeliveryMode(text);
   const yearRange = detectYearRange(text, { unknownWhenUnstated: unknownYearWhenUnstated });
+  const deadlineDetails = extractDeadlineDetails(text);
 
   return {
     school_slug: schoolSlug,
@@ -1445,7 +1573,11 @@ export function parseTextToOpportunityCandidate({
       }),
       delivery_mode: deliveryMode,
       location: locationOverride || detectLocation(text, deliveryMode),
-      deadline: deadlineOverride || extractDeadline(text),
+      deadline: deadlineOverride ?? deadlineDetails.deadline,
+      deadline_has_time: deadlineHasTimeOverride ?? deadlineDetails.deadline_has_time,
+      deadline_source_timezone:
+        deadlineSourceTimezoneOverride ?? deadlineDetails.deadline_source_timezone,
+      deadline_source_text: deadlineSourceTextOverride ?? deadlineDetails.deadline_source_text,
     },
   };
 }

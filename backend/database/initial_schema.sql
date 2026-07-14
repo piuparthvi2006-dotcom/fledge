@@ -60,6 +60,10 @@ create table public.opportunities (
   -- venue or campus name; null when not applicable (e.g. fully online)
   location text,
   deadline timestamptz,
+  -- UTC instant when the source provides an exact time and timezone.
+  deadline_has_time boolean not null default false,
+  deadline_source_timezone text,
+  deadline_source_text text,
 
   created_at timestamptz default now(),
 

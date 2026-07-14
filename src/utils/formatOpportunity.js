@@ -4,14 +4,32 @@ function formatYearTag(yearMin, yearMax) {
   return `👤 Year ${yearMin}-${yearMax}`;
 }
 
-function formatDeadline(deadline) {
-  if (!deadline) return "Open year-round";
+function formatDeadline(row) {
+  if (!row.deadline) return "Open year-round";
 
-  const date = new Date(deadline);
-  return `Deadline: ${date.toLocaleDateString("en-US", {
+  if (row.deadline_has_time && !row.deadline_source_timezone) {
+    return row.deadline_source_text
+      ? `Deadline: ${row.deadline_source_text} (time zone not stated)`
+      : "Deadline time zone not stated";
+  }
+
+  const date = new Date(row.deadline);
+  const dateLabel = date.toLocaleDateString("en-SG", {
     month: "short",
     day: "numeric",
-  })}`;
+    timeZone: "Asia/Singapore",
+  });
+
+  if (!row.deadline_has_time) return `Deadline: ${dateLabel}`;
+
+  const timeLabel = date.toLocaleTimeString("en-SG", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Singapore",
+  });
+
+  return `Deadline: ${dateLabel}, ${timeLabel} SGT`;
 }
 
 function getCategoryIcon(category) {
@@ -55,7 +73,7 @@ export function formatOpportunity(row) {
     location: formatLocation(row),
     yearTag: formatYearTag(row.year_min, row.year_max),
     deadline: row.deadline,
-    deadlineLabel: formatDeadline(row.deadline),
+    deadlineLabel: formatDeadline(row),
     icon: getCategoryIcon(row.category),
     badge: row.eligibility ? "Requirements listed" : "Open to all",
     source_priority: row.source_priority ?? 99,
@@ -64,5 +82,8 @@ export function formatOpportunity(row) {
     year_max: row.year_max,
     eligible_majors: row.eligible_majors || [],
     eligibility: row.eligibility || "",
+    deadline_has_time: row.deadline_has_time || false,
+    deadline_source_timezone: row.deadline_source_timezone || null,
+    deadline_source_text: row.deadline_source_text || null,
   };
 }
