@@ -4,7 +4,9 @@ const GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0";
 const OUTLOOK_IMMUTABLE_ID_PREFERENCE = 'IdType="ImmutableId"';
 
 function getTenantId() {
-  return process.env.MICROSOFT_TENANT_ID || "common";
+  return process.env.MICROSOFT_AUTHORITY_TENANT
+    || process.env.MICROSOFT_TENANT_ID
+    || "organizations";
 }
 
 async function requestJson(url, options) {

@@ -48,6 +48,33 @@ test("warns when a source gives a time without a timezone", () => {
   assert.match(opportunity.deadlineLabel, /time zone not stated/i);
 });
 
+test("shows both dates while keeping the NUS deadline as the controlling date", () => {
+  const opportunity = formatOpportunity({
+    id: "deadline-conflict",
+    title: "International Student Competition",
+    description: "",
+    category: "competition",
+    organisation: "Example University",
+    deadline: "2026-08-16T00:00:00.000Z",
+    deadline_has_time: false,
+    deadline_source: "nus",
+    external_deadline: "2026-08-30T00:00:00.000Z",
+    external_deadline_has_time: false,
+    deadline_conflict: true,
+    deadline_note: "NUS internal application deadline",
+  });
+
+  assert.match(opportunity.deadlineLabel, /^NUS application deadline:/);
+  assert.match(opportunity.deadlineLabel, /(Aug 16|16 Aug)/);
+  assert.match(opportunity.externalDeadlineLabel, /^Host deadline:/);
+  assert.match(opportunity.externalDeadlineLabel, /(Aug 30|30 Aug)/);
+  assert.equal(opportunity.deadline_conflict, true);
+  assert.equal(
+    getOpportunityExpiryTime(opportunity),
+    new Date("2026-08-16T23:59:59.999+08:00").getTime()
+  );
+});
+
 test("labels an undated application as rolling", () => {
   const opportunity = formatOpportunity({
     id: "rolling-application",

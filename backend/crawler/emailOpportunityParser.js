@@ -1933,6 +1933,53 @@ function getProgrammeDetailOverrides(document, fallbackEligibility) {
   };
 }
 
+const NUS_INTERNAL_DEADLINE_SIGNALS = [
+  /\bnus (?:application|internal) deadline\b/i,
+  /\binternal application deadline\b/i,
+  /\bapply (?:directly )?(?:through|via|to) nus\b/i,
+  /\bsubmit (?:the )?(?:application|particulars) to nus\b/i,
+  /\bnus students? must apply by\b/i,
+];
+
+function isNusEmailAddress(address) {
+  return /@(?:[a-z0-9-]+\.)*nus\.edu\.sg$/i.test(address || "");
+}
+
+function isNusWebUrl(value) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === "nus.edu.sg" || hostname.endsWith(".nus.edu.sg");
+  } catch {
+    return false;
+  }
+}
+
+function determineDeadlineSource({
+  deadline,
+  sourceType,
+  sourceUrl,
+  rawSender,
+  text,
+  override,
+}) {
+  if (!deadline) return null;
+  if (override === "nus" || override === "organiser") return override;
+
+  if (sourceType === "public_web" && isNusWebUrl(sourceUrl)) {
+    return "nus";
+  }
+
+  if (
+    sourceType === "outlook_email" &&
+    (isNusEmailAddress(rawSender) ||
+      NUS_INTERNAL_DEADLINE_SIGNALS.some((signal) => signal.test(text)))
+  ) {
+    return "nus";
+  }
+
+  return "organiser";
+}
+
 export function parseTextToOpportunityCandidate({
   sourceType,
   sourceId,
@@ -1959,6 +2006,7 @@ export function parseTextToOpportunityCandidate({
   deadlineHasTimeOverride,
   deadlineSourceTimezoneOverride,
   deadlineSourceTextOverride,
+  deadlineSourceOverride,
   deliveryModeOverride,
   applicationUrlOverride,
   sourcePublishedAt = null,
@@ -2009,6 +2057,14 @@ export function parseTextToOpportunityCandidate({
   const resolvedSourceUrl = sourceUrl || extractFirstUrl(text);
   const applicationUrl = applicationUrlOverride || extractApplicationUrl(text);
   const deadline = deadlineOverride ?? deadlineDetails.deadline;
+  const deadlineSource = determineDeadlineSource({
+    deadline,
+    sourceType,
+    sourceUrl: resolvedSourceUrl,
+    rawSender,
+    text,
+    override: deadlineSourceOverride,
+  });
 
   if (!applicationUrl && !deadline) {
     return null;
@@ -2079,6 +2135,13 @@ export function parseTextToOpportunityCandidate({
     deadline_source_timezone:
       deadlineSourceTimezoneOverride ?? deadlineDetails.deadline_source_timezone,
     deadline_source_text: deadlineSourceTextOverride ?? deadlineDetails.deadline_source_text,
+    deadline_source: deadlineSource,
+    external_deadline: null,
+    external_deadline_has_time: false,
+    external_deadline_source_timezone: null,
+    external_deadline_source_text: null,
+    deadline_conflict: false,
+    deadline_note: null,
     listing_expires_at: listingExpiresAt,
     visibility: visibilityDecision.visibility,
     owner_user_id: visibilityDecision.ownerUserId,
@@ -2094,6 +2157,7 @@ export function parseTextToOpportunityCandidate({
     application_url: applicationUrl,
     category,
     deadline: opportunity.deadline_source_text,
+    deadline_source: deadlineSource,
     eligibility: eligibilityAssessment.reason,
     eligibility_scope: eligibilityAssessment.scope,
     host_country: eligibilityAssessment.hostCountry,

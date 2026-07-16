@@ -2,7 +2,7 @@ name: Crawl opportunities
 
 on:
   schedule:
-    - cron: "17 */6 * * *"
+    - cron: "17 3 */2 * *"
       timezone: "Asia/Singapore"
   workflow_dispatch:
     inputs:
@@ -29,6 +29,7 @@ jobs:
       MICROSOFT_CLIENT_ID: ${{ secrets.MICROSOFT_CLIENT_ID }}
       MICROSOFT_TENANT_ID: ${{ secrets.MICROSOFT_TENANT_ID }}
       MICROSOFT_CLIENT_SECRET: ${{ secrets.MICROSOFT_CLIENT_SECRET }}
+      MICROSOFT_AUTHORITY_TENANT: organizations
       OUTLOOK_REFRESH_TOKEN: ${{ secrets.OUTLOOK_REFRESH_TOKEN }}
       OUTLOOK_OWNER_USER_ID: ${{ secrets.OUTLOOK_OWNER_USER_ID }}
       TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}

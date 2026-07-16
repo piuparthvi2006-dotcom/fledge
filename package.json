@@ -15,6 +15,7 @@
     "crawl:nus": "node backend/crawler/runCrawler.js --nus-web",
     "crawl:outlook": "node backend/crawler/runCrawler.js --outlook",
     "crawl:all": "node backend/crawler/runCrawler.js --all",
+    "outlook:authorize": "node backend/crawler/authorizeOutlook.js",
     "candidates:list": "node backend/crawler/reviewCandidates.js --list",
     "candidates:approve": "node backend/crawler/reviewCandidates.js --approve",
     "candidates:reject": "node backend/crawler/reviewCandidates.js --reject"

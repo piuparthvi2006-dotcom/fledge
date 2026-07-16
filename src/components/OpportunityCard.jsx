@@ -42,12 +42,14 @@ export default function OpportunityCard({ opportunity, isBookmarked, onBookmark,
   const [reportOpen, setReportOpen] = useState(false);
   const {
     id, title, category, organisation, description,
-    location, yearTag, badge, icon, deadlineLabel,
+    location, yearTag, badge, icon, deadlineLabel, externalDeadlineLabel,
   } = opportunity;
   const expired = isOpportunityExpired(opportunity);
   const eligibilityWarning =
     opportunity.eligibilityWarning || getEligibilityWarning(opportunity);
   const displayedBadge = eligibilityWarning ? 'Check eligibility' : badge;
+  const detailsUrl = opportunity.application_url || opportunity.source_url;
+  const detailsUnavailable = !detailsUrl;
 
   return (
     <div style={{
@@ -175,16 +177,34 @@ export default function OpportunityCard({ opportunity, isBookmarked, onBookmark,
 
       {/* Footer — full width button, deadline centred below */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <button disabled={expired} style={{
-          width: '100%', background: expired ? '#A3A39D' : '#C94F1A', color: '#ffffff', border: 'none',
+        <button
+          disabled={expired || detailsUnavailable}
+          onClick={() => window.open(detailsUrl, '_blank', 'noopener,noreferrer')}
+          type="button"
+          style={{
+          width: '100%', background: expired || detailsUnavailable ? '#A3A39D' : '#C94F1A', color: '#ffffff', border: 'none',
           borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 500,
-          cursor: expired ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'center',
+          cursor: expired || detailsUnavailable ? 'not-allowed' : 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'center',
         }}>
-          {expired ? 'Expired' : 'View Details'}
+          {expired ? 'Expired' : detailsUnavailable ? 'Details unavailable' : 'View Details'}
         </button>
-        <span style={{ fontSize: '11px', color: '#7a7a72', textAlign: 'center' }}>
-          ⏰ {expired ? 'Application closed' : deadlineLabel}
-        </span>
+        {expired ? (
+          <span style={{ fontSize: '11px', color: '#7a7a72', textAlign: 'center' }}>
+            ⏰ Application closed
+          </span>
+        ) : (
+          <div style={{ color: '#7a7a72', fontSize: '11px', lineHeight: 1.45, textAlign: 'center' }}>
+            <div style={{ color: opportunity.deadline_source === 'nus' ? '#8B3A16' : '#7a7a72', fontWeight: opportunity.deadline_source === 'nus' ? 600 : 400 }}>
+              ⏰ {deadlineLabel}
+            </div>
+            {externalDeadlineLabel && (
+              <div>{externalDeadlineLabel}</div>
+            )}
+            {opportunity.deadline_conflict && opportunity.deadline_note && (
+              <div style={{ marginTop: '2px' }}>Use the NUS deadline when applying through NUS.</div>
+            )}
+          </div>
+        )}
       </div>
 
       {reportOpen && (

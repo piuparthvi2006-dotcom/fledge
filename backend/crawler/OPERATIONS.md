@@ -2,9 +2,20 @@
 
 ## Migration order
 
-Run every migration in `backend/database/migrations` in filename order. The
-Phase 3 through Phase 6 migrations require the Phase 1 quality fields and the
-Phase 2 idempotent ingestion function to exist first.
+Run the dated migrations in `backend/database/migrations` in phase-number
+order. The Phase 3 through Phase 6 migrations require the Phase 1 quality
+fields and the Phase 2 idempotent ingestion function to exist first. For the
+2026-07-16 files, run Phase 9, Phase 10, Phase 11, then Phase 12; alphabetical
+filename sorting places `phase9` after `phase12`, which is not the intended
+database order.
+
+Phase 12 installs a Supabase Auth trigger that creates a `profiles` row for
+each new account and backfills accounts that already exist. Run it after Phase
+11 in the Supabase SQL Editor, then reload the Data API schema if necessary:
+
+```sql
+notify pgrst, 'reload schema';
+```
 
 ## Local commands
 
@@ -15,6 +26,7 @@ npm run crawl:discover
 npm run crawl:nus
 npm run crawl:outlook
 npm run crawl:all
+npm run outlook:authorize
 ```
 
 Add `-- --save` to persist results in Supabase:
@@ -28,6 +40,45 @@ npm run crawl:web -- --save
 The discovery client uses eight NUS/student-focused searches per run and sends
 the returned pages through the normal eligibility, quality, expiry, and
 deduplication pipeline.
+
+## One-time Outlook mailbox connection
+
+The crawler needs a refresh token before `crawl:outlook` can read the connected
+mailbox. The token is not the Microsoft password. It is issued only after the
+mailbox owner signs in and grants the delegated `Mail.Read` permission.
+
+For the current single-mailbox MVP:
+
+1. In the Microsoft app registration, add this exact **Web** redirect URI:
+
+   ```text
+   http://127.0.0.1:8787/callback
+   ```
+
+2. Add delegated Microsoft Graph permissions for `Mail.Read` and `User.Read`.
+3. Put the client ID, tenant ID, and client secret in `backend/.env`.
+4. Keep `MICROSOFT_AUTHORITY_TENANT=organizations` and set
+   `MICROSOFT_SETUP_REDIRECT_URI=http://127.0.0.1:8787/callback`.
+5. From the VS Code terminal, run:
+
+   ```bash
+   npm run outlook:authorize
+   ```
+
+6. Open the URL printed by the command, sign in to the mailbox, and accept the
+   requested permissions.
+7. Put the returned token in `OUTLOOK_REFRESH_TOKEN` in `backend/.env`. Add the
+   same value as a GitHub Actions secret when scheduled Outlook crawling is
+   enabled.
+
+The local URL is only a temporary callback for this one-time terminal command;
+it does not run a local version of the Fledge frontend. The command validates a
+random OAuth state value and uses PKCE before exchanging the authorization code.
+Never commit the returned refresh token.
+
+This is suitable for one consented administrator mailbox. A later multi-user
+version needs a hosted callback and encrypted, per-user token storage instead
+of one shared environment variable.
 
 Saved crawls now perform this sequence:
 
@@ -126,9 +177,9 @@ mailbox refresh token. For the current single-mailbox MVP it is an environment
 variable; a multi-user version should store each encrypted refresh token with
 its owner UUID in the database.
 
-The scheduled workflow runs public-web crawling every six hours in the
-`Asia/Singapore` timezone. Outlook is available only through the workflow's
-manual `include_outlook` option.
+During the testing stage, the scheduled workflow runs public-web crawling at
+03:17 Singapore time on every second calendar day. Outlook is available only
+through the workflow's manual `include_outlook` option.
 
 Outlook candidates use source priority `0`, NUS websites use `1`, known
 external sources use `3`, and broad discovery uses `4`. Outlook is collected
@@ -193,6 +244,50 @@ order by report.created_at;
 After checking the official source, update the report to `resolved` or
 `dismissed` and set `resolved_at = now()`. Use the service role from trusted
 backend code or the Supabase SQL editor for administrator actions.
+
+## Conflicting NUS and host deadlines
+
+Apply `20260716_phase11_add_deadline_source_reconciliation.sql` after Phase 10.
+The parser marks deadlines from official NUS pages and NUS email senders as
+`nus`; deadlines from external websites and external email senders are marked
+as `organiser`.
+
+The publication wrapper may join two differently sourced records only when the
+normalised title, organisation, category, school, and visibility match and the
+two deadlines are no more than 90 days apart. Existing dedupe keys are still
+checked first. This narrow fallback is intended for the same application cycle,
+not for similarly named opportunities or the next yearly intake.
+
+When linked sources disagree, `opportunities.deadline` stores the NUS internal
+deadline and therefore controls `active_opportunities`, expiry, and the 15-day
+retention period. The host date is retained in `external_deadline`, and
+`deadline_conflict` is set to `true`. The frontend then shows both dates and
+tells students to use the NUS deadline when applying through NUS.
+
+## Netlify frontend deployment
+
+`netlify.toml` tells Netlify to run `npm run build`, publish the generated
+`dist` folder, and send application routes such as `/profile` and
+`/reset-password` to `index.html` so React Router can open them directly.
+
+In the existing Netlify site, add these variables under the site's environment
+variable settings and trigger a new deployment:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+```
+
+Use the Supabase project base URL and publishable key. Do not add the Supabase
+secret key to Netlify. In Supabase Authentication URL Configuration, set the
+Netlify site URL as the Site URL and allow the deployed `/explore` and
+`/reset-password` callback URLs. Configure the Azure provider in Supabase only
+when the **Continue with NUS Email** button is ready to be tested.
+
+The `Verify application` GitHub workflow runs lint, automated tests, and a
+production build for every pull request and every push to `main`. Add the same
+two public Vite values as GitHub Actions secrets so that CI builds with the
+deployed configuration.
 
 ## Monitoring queries
 

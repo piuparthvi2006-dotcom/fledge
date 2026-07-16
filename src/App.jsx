@@ -10,6 +10,9 @@ import Saved from './pages/Saved';
 import ForYou from './pages/ForYou';
 import SignUp from './pages/SignUp';
 import LogIn from './pages/LogIn';
+import Profile from './pages/Profile';
+import ResetPassword from './pages/ResetPassword';
+import OpportunitiesProvider from './providers/OpportunitiesProvider';
 
 // Load fonts once, globally
 const fontLink = document.createElement('link');
@@ -20,14 +23,18 @@ document.head.appendChild(fontLink);
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/saved" element={<Saved />} />
-        <Route path="/for-you" element={<ForYou />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/login" element={<LogIn />} />
-      </Routes>
+      <OpportunitiesProvider>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/saved" element={<Saved />} />
+          <Route path="/for-you" element={<ForYou />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<LogIn />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+        </Routes>
+      </OpportunitiesProvider>
     </BrowserRouter>
   );
 }

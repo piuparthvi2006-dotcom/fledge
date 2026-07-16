@@ -18,6 +18,43 @@ create table public.profiles (
   created_at timestamptz default now()
 );
 
+create or replace function public.create_profile_for_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, full_name, university)
+  values (
+    new.id,
+    nullif(btrim(new.raw_user_meta_data ->> 'full_name'), ''),
+    'nus'
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+create trigger create_profile_after_signup
+after insert on auth.users
+for each row
+execute function public.create_profile_for_new_user();
+
+-- Create profiles for users who existed before this schema was applied.
+insert into public.profiles as existing_profile (id, full_name, university)
+select
+  auth_user.id,
+  nullif(btrim(auth_user.raw_user_meta_data ->> 'full_name'), ''),
+  'nus'
+from auth.users as auth_user
+on conflict (id) do update
+set full_name = coalesce(existing_profile.full_name, excluded.full_name);
+
+revoke all on function public.create_profile_for_new_user()
+from public, anon, authenticated;
+
 create table public.opportunities (
   id uuid primary key default gen_random_uuid(),
   school_slug text not null default 'nus',
@@ -83,12 +120,30 @@ create table public.opportunities (
   deadline_has_time boolean not null default false,
   deadline_source_timezone text,
   deadline_source_text text,
+  -- The NUS deadline controls expiry when NUS and the host publish different dates.
+  deadline_source text not null default 'unknown' check (
+    deadline_source in ('nus', 'organiser', 'unknown')
+  ),
+  external_deadline timestamptz,
+  external_deadline_has_time boolean not null default false,
+  external_deadline_source_timezone text,
+  external_deadline_source_text text,
+  deadline_conflict boolean not null default false,
+  deadline_note text,
   listing_expires_at timestamptz,
 
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
 
-  constraint opportunities_year_range_valid check (year_min <= year_max)
+  constraint opportunities_year_range_valid check (year_min <= year_max),
+  constraint opportunities_deadline_conflict_valid check (
+    not deadline_conflict
+    or (
+      deadline_source = 'nus'
+      and external_deadline is not null
+      and deadline is distinct from external_deadline
+    )
+  )
 );
 
 create table public.saved_opportunities (
@@ -367,187 +422,7 @@ insert into public.majors (slug, label) values
   ('theatre_and_performance_studies', 'Theatre and Performance Studies'),
   ('other', 'Other');
 
-insert into public.opportunities (
-  title,
-  description,
-  category,
-  source_priority,
-  organisation,
-  source_url,
-  eligibility,
-  year_min,
-  year_max,
-  eligible_majors,
-  delivery_mode,
-  location,
-  deadline
-)
-values
-(
-  'Software Engineering Internship',
-  'A practical internship for students interested in software development, web applications, backend systems, and real-world engineering projects.',
-  'internship',
-  3,
-  'Tech Career Office',
-  'https://example.com/software-engineering-internship',
-  'Basic programming knowledge recommended.',
-  1,
-  4,
-  array['computer_science', 'engineering', 'business_artificial_intelligence_systems'],
-  'hybrid',
-  null,
-  now() + interval '40 days'
-),
-(
-  'University Innovation Competition',
-  'A student competition where individuals or teams propose innovative solutions to real-world problems.',
-  'competition',
-  3,
-  'Innovation Centre',
-  'https://example.com/university-innovation-competition',
-  'Open to all students.',
-  1,
-  4,
-  '{}',
-  'in_person',
-  'On campus',
-  now() + interval '25 days'
-),
-(
-  'AI Research Assistant Programme',
-  'A research opportunity for students interested in artificial intelligence, machine learning, data analysis, and academic research.',
-  'research',
-  1,
-  'School of Computing',
-  'https://example.com/ai-research-assistant-programme',
-  'Basic Python knowledge recommended.',
-  1,
-  4,
-  array['computer_science', 'data_science_and_analytics', 'mathematics'],
-  'in_person',
-  'School of Computing',
-  now() + interval '30 days'
-),
-(
-  'Global Exchange Information Session',
-  'An information session about overseas exchange programmes, eligibility, application timelines, partner universities, and scholarship options.',
-  'exchange',
-  1,
-  'International Office',
-  'https://example.com/global-exchange-information-session',
-  'Recommended for year 1 and year 2 students.',
-  1,
-  2,
-  '{}',
-  'online',
-  null,
-  now() + interval '21 days'
-),
-(
-  'Summer Entrepreneurship Programme',
-  'A summer programme for students who want to develop startup ideas, learn business validation, and pitch ideas to mentors.',
-  'summer_programme',
-  1,
-  'Entrepreneurship Centre',
-  'https://example.com/summer-entrepreneurship-programme',
-  'Open to students interested in startups, innovation, or business.',
-  1,
-  4,
-  array['business_administration', 'computer_science', 'engineering'],
-  'in_person',
-  'On campus',
-  now() + interval '60 days'
-),
-(
-  'Winter Data Science Bootcamp',
-  'A winter programme teaching students basic data analysis, Python, data visualization, and introductory machine learning concepts.',
-  'winter_programme',
-  1,
-  'Data Science Club',
-  'https://example.com/winter-data-science-bootcamp',
-  'No prior data science experience required.',
-  1,
-  4,
-  array['computer_science', 'data_science_and_analytics', 'business_analytics'],
-  'online',
-  null,
-  now() + interval '75 days'
-),
-(
-  'Community Volunteer Programme',
-  'A volunteering opportunity where students support local community projects, social impact initiatives, and charity events.',
-  'community',
-  1,
-  'Student Volunteer Office',
-  'https://example.com/community-volunteer-programme',
-  'Open to all students.',
-  1,
-  4,
-  '{}',
-  'in_person',
-  'Local community centre',
-  now() + interval '20 days'
-),
-(
-  'Career Mentorship Programme',
-  'A mentorship programme that connects students with seniors, alumni, and industry professionals for academic and career guidance.',
-  'mentorship',
-  1,
-  'Career Development Office',
-  'https://example.com/career-mentorship-programme',
-  'Open to students seeking academic or career advice.',
-  1,
-  4,
-  '{}',
-  'hybrid',
-  null,
-  now() + interval '35 days'
-),
-(
-  'Startup Networking Night',
-  'A networking event where students can meet startup founders, investors, alumni, and entrepreneurship mentors.',
-  'networking',
-  1,
-  'Entrepreneurship Centre',
-  'https://example.com/startup-networking-night',
-  'Open to all students.',
-  1,
-  4,
-  '{}',
-  'in_person',
-  'Main Auditorium',
-  now() + interval '14 days'
-),
-(
-  'Student Founder Incubator',
-  'An entrepreneurship programme for students who want to build, validate, and test early-stage startup ideas.',
-  'entrepreneurship',
-  1,
-  'University Incubator',
-  'https://example.com/student-founder-incubator',
-  'Students should have a startup idea or strong interest in entrepreneurship.',
-  1,
-  4,
-  array['business_administration', 'computer_science', 'engineering'],
-  'in_person',
-  'Innovation Lab',
-  now() + interval '50 days'
-),
-(
-  'Open Student Opportunity',
-  'A general opportunity for students that does not fit into the main categories.',
-  'other',
-  1,
-  'Student Affairs Office',
-  'https://example.com/open-student-opportunity',
-  'Open to all students.',
-  1,
-  4,
-  '{}',
-  'unspecified',
-  null,
-  now() + interval '28 days'
-);
+-- Production opportunities are added only by verified crawler or admin input.
 
 create index opportunities_category_idx
 on public.opportunities(category);
@@ -566,6 +441,10 @@ on public.opportunities(delivery_mode);
 
 create index opportunities_deadline_idx
 on public.opportunities(deadline);
+
+create index opportunities_external_deadline_idx
+on public.opportunities(external_deadline)
+where external_deadline is not null;
 
 create index opportunities_listing_expires_at_idx
 on public.opportunities(listing_expires_at);

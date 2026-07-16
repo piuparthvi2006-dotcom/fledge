@@ -3,7 +3,11 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmail, signInWithNus } from '../utils/auth';
+import {
+  sendPasswordResetEmail,
+  signInWithEmail,
+  signInWithNus,
+} from '../utils/auth';
 
 export default function LogIn() {
   const navigate = useNavigate();
@@ -11,10 +15,12 @@ export default function LogIn() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
 
   async function handleNusSignIn() {
     setSubmitting(true);
     setErrorMessage('');
+    setStatusMessage('');
 
     try {
       await signInWithNus();
@@ -28,6 +34,7 @@ export default function LogIn() {
     event.preventDefault();
     setSubmitting(true);
     setErrorMessage('');
+    setStatusMessage('');
 
     try {
       await signInWithEmail({ email, password });
@@ -35,6 +42,26 @@ export default function LogIn() {
     } catch (error) {
       setSubmitting(false);
       setErrorMessage(error.message);
+    }
+  }
+
+  async function handleForgotPassword() {
+    setErrorMessage('');
+    setStatusMessage('');
+
+    if (!email.trim()) {
+      setErrorMessage('Enter your email address first.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await sendPasswordResetEmail(email);
+      setStatusMessage('Check your email for a password reset link.');
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -132,9 +159,24 @@ export default function LogIn() {
             />
           </div>
 
-          <p style={{ fontSize: '12px', color: '#C94F1A', marginBottom: '20px', cursor: 'pointer' }}>
+          <button
+            disabled={submitting}
+            onClick={handleForgotPassword}
+            style={forgotPasswordStyle}
+            type="button"
+          >
             Forgot password?
-          </p>
+          </button>
+
+          {statusMessage && (
+            <p role="status" style={{
+              background: '#E8F5E9', borderRadius: '6px', color: '#2A6E2A',
+              fontSize: '12px', lineHeight: 1.45, marginBottom: '16px',
+              padding: '10px 12px',
+            }}>
+              {statusMessage}
+            </p>
+          )}
 
           {errorMessage && (
             <p
@@ -171,4 +213,15 @@ const inputStyle = {
   width: '100%', padding: '11px 14px', border: '1px solid #e2ddd6',
   borderRadius: '10px', fontSize: '14px', fontFamily: "'DM Sans', sans-serif",
   color: '#1a1a18', outline: 'none', background: '#FAFAF7',
+};
+
+const forgotPasswordStyle = {
+  background: 'transparent',
+  border: 'none',
+  color: '#C94F1A',
+  cursor: 'pointer',
+  fontFamily: "'DM Sans', sans-serif",
+  fontSize: '12px',
+  marginBottom: '20px',
+  padding: 0,
 };

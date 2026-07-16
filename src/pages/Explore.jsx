@@ -3,10 +3,13 @@
 // all combined to narrow down the opportunities grid.
 
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import FilterBar from '../components/FilterBar';
 import OpportunityCard from '../components/OpportunityCard';
-import opportunities, { CATEGORIES, MAJORS } from '../data/opportunities';
+import OpportunityDataState from '../components/OpportunityDataState';
+import { CATEGORIES, MAJORS } from '../data/opportunityFilters';
+import { useOpportunities } from '../hooks/useOpportunities';
 import { matchesMajor, matchesYear } from '../utils/filterOpportunities';
 import { isOpportunityExpired } from '../utils/formatOpportunity';
 
@@ -15,22 +18,39 @@ function getDeadlineTime(opportunity) {
 }
 
 export default function Explore() {
+  const navigate = useNavigate();
+  const {
+    error,
+    isLoading,
+    opportunities,
+    refresh,
+    savedOpportunityIds,
+    toggleSaved,
+  } = useOpportunities();
   // --- STATE ---
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategories, setActiveCategories] = useState([]);
   const [selectedMajor, setSelectedMajor] = useState('');
   const [activeYear, setActiveYear] = useState(0); // 0 = all years
   const [sortBy, setSortBy] = useState('deadline');
-  const [bookmarks, setBookmarks] = useState([]);
+  const [actionError, setActionError] = useState('');
   const activeOpportunities = useMemo(
     () => opportunities.filter(opportunity => !isOpportunityExpired(opportunity)),
-    []
+    [opportunities]
   );
 
-  function toggleBookmark(id) {
-    setBookmarks(prev =>
-      prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]
-    );
+  async function toggleBookmark(id) {
+    setActionError('');
+
+    try {
+      await toggleSaved(id);
+    } catch (saveError) {
+      if (saveError.code === 'AUTH_REQUIRED') {
+        navigate('/login');
+        return;
+      }
+      setActionError(saveError.message);
+    }
   }
 
   function toggleCategory(key) {
@@ -53,9 +73,9 @@ export default function Explore() {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       results = results.filter(o =>
-        o.title.toLowerCase().includes(q) ||
-        o.organisation.toLowerCase().includes(q) ||
-        o.description.toLowerCase().includes(q)
+        String(o.title || '').toLowerCase().includes(q) ||
+        String(o.organisation || '').toLowerCase().includes(q) ||
+        String(o.description || '').toLowerCase().includes(q)
       );
     }
 
@@ -95,7 +115,9 @@ export default function Explore() {
           Explore Opportunities
         </h1>
         <p style={{ fontSize: '15px', color: '#6e6e64' }}>
-          {activeOpportunities.length}+ opportunities across internships, research, programmes and more
+          {isLoading
+            ? 'Loading current opportunities'
+            : `${activeOpportunities.length} opportunities across internships, research, programmes and more`}
         </p>
       </div>
 
@@ -184,9 +206,17 @@ export default function Explore() {
         </select>
       </div>
 
+      {actionError && (
+        <div role="alert" style={{ color: '#9A3510', fontSize: '13px', padding: '0 48px 14px' }}>
+          {actionError}
+        </div>
+      )}
+
       {/* Cards grid */}
       <div style={{ padding: '0 48px 48px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-        {filtered.length === 0 ? (
+        {isLoading || error ? (
+          <OpportunityDataState error={error} isLoading={isLoading} onRetry={refresh} />
+        ) : filtered.length === 0 ? (
           <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: '#9a9a8a', padding: '40px 0' }}>
             No opportunities match your filters.
           </p>
@@ -195,7 +225,7 @@ export default function Explore() {
             <OpportunityCard
               key={opp.id}
               opportunity={opp}
-              isBookmarked={bookmarks.includes(opp.id)}
+              isBookmarked={savedOpportunityIds.includes(opp.id)}
               onBookmark={toggleBookmark}
             />
           ))

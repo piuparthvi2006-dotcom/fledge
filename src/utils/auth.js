@@ -50,3 +50,26 @@ export async function signInWithNus() {
   return data;
 }
 
+export async function signOut() {
+  const client = requireSupabase();
+  const { error } = await client.auth.signOut();
+
+  if (error) throw error;
+}
+
+export async function sendPasswordResetEmail(email) {
+  const client = requireSupabase();
+  const { error } = await client.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+
+  if (error) throw error;
+}
+
+export async function updatePassword(password) {
+  const client = requireSupabase();
+  const { data, error } = await client.auth.updateUser({ password });
+
+  if (error) throw error;
+  return data;
+}

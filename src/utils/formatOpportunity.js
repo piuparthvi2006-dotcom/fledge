@@ -76,27 +76,30 @@ function formatYearTag(row) {
   return `👤 Year ${row.year_min}-${row.year_max}`;
 }
 
-function formatDeadline(row) {
-  if (!row.deadline) {
-    return row.listing_expires_at
-      ? "Rolling applications"
-      : "Application timing not stated";
+function formatDeadlineValue({
+  deadline,
+  deadlineHasTime,
+  deadlineSourceTimezone,
+  deadlineSourceText,
+  label,
+}) {
+  if (!deadline) return null;
+
+  if (deadlineHasTime && !deadlineSourceTimezone) {
+    return deadlineSourceText
+      ? `${label}: ${deadlineSourceText} (time zone not stated)`
+      : `${label} time zone not stated`;
   }
 
-  if (row.deadline_has_time && !row.deadline_source_timezone) {
-    return row.deadline_source_text
-      ? `Deadline: ${row.deadline_source_text} (time zone not stated)`
-      : "Deadline time zone not stated";
-  }
-
-  const date = new Date(row.deadline);
+  const date = new Date(deadline);
   const dateLabel = date.toLocaleDateString("en-SG", {
     month: "short",
     day: "numeric",
+    year: "numeric",
     timeZone: "Asia/Singapore",
   });
 
-  if (!row.deadline_has_time) return `Deadline: ${dateLabel}`;
+  if (!deadlineHasTime) return `${label}: ${dateLabel}`;
 
   const timeLabel = date.toLocaleTimeString("en-SG", {
     hour: "numeric",
@@ -105,7 +108,38 @@ function formatDeadline(row) {
     timeZone: "Asia/Singapore",
   });
 
-  return `Deadline: ${dateLabel}, ${timeLabel} SGT`;
+  return `${label}: ${dateLabel}, ${timeLabel} SGT`;
+}
+
+function formatDeadline(row) {
+  if (!row.deadline) {
+    return row.listing_expires_at
+      ? "Rolling applications"
+      : "Application timing not stated";
+  }
+
+  return formatDeadlineValue({
+    deadline: row.deadline,
+    deadlineHasTime: row.deadline_has_time,
+    deadlineSourceTimezone: row.deadline_source_timezone,
+    deadlineSourceText: row.deadline_source_text,
+    label:
+      row.deadline_source === "nus"
+        ? "NUS application deadline"
+        : "Deadline",
+  });
+}
+
+function formatExternalDeadline(row) {
+  if (!row.deadline_conflict || !row.external_deadline) return null;
+
+  return formatDeadlineValue({
+    deadline: row.external_deadline,
+    deadlineHasTime: row.external_deadline_has_time,
+    deadlineSourceTimezone: row.external_deadline_source_timezone,
+    deadlineSourceText: row.external_deadline_source_text,
+    label: "Host deadline",
+  });
 }
 
 function getCategoryIcon(category) {
@@ -163,6 +197,7 @@ export function formatOpportunity(row) {
     }),
     deadline: row.deadline,
     deadlineLabel: formatDeadline(row),
+    externalDeadlineLabel: formatExternalDeadline(row),
     icon: getCategoryIcon(row.category),
     badge: eligibilityWarning
       ? "Check eligibility"
@@ -172,6 +207,7 @@ export function formatOpportunity(row) {
     eligibilityWarning,
     source_priority: row.source_priority ?? 99,
     source_published_at: row.source_published_at || null,
+    created_at: row.created_at || null,
     last_seen_at: row.last_seen_at || null,
     confidence_score: row.confidence_score ?? 0,
     dedupe_key: row.dedupe_key || null,
@@ -190,5 +226,13 @@ export function formatOpportunity(row) {
     deadline_has_time: row.deadline_has_time || false,
     deadline_source_timezone: row.deadline_source_timezone || null,
     deadline_source_text: row.deadline_source_text || null,
+    deadline_source: row.deadline_source || "unknown",
+    external_deadline: row.external_deadline || null,
+    external_deadline_has_time: row.external_deadline_has_time || false,
+    external_deadline_source_timezone:
+      row.external_deadline_source_timezone || null,
+    external_deadline_source_text: row.external_deadline_source_text || null,
+    deadline_conflict: row.deadline_conflict || false,
+    deadline_note: row.deadline_note || null,
   };
 }

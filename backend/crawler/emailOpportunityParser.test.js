@@ -106,6 +106,7 @@ test("uses the internet message ID as the stable Outlook source identity", () =>
   assert.equal(candidate.opportunity.major_eligibility_type, "all");
   assert.equal(candidate.visibility, "public");
   assert.equal(candidate.owner_user_id, null);
+  assert.equal(candidate.opportunity.deadline_source, "nus");
 });
 
 test("keeps a major-restricted Outlook opportunity private to the mailbox owner", () => {
@@ -232,6 +233,7 @@ test("parses an NUS partner winter-programme PDF as a specific opportunity", () 
   assert.equal(candidate.opportunity.deadline, "2026-10-18T00:00:00.000Z");
   assert.equal(candidate.opportunity.deadline_has_time, false);
   assert.equal(candidate.opportunity.deadline_source_timezone, null);
+  assert.equal(candidate.opportunity.deadline_source, "nus");
   assert.equal(candidate.opportunity.year_min, null);
   assert.equal(candidate.opportunity.year_max, null);
   assert.deepEqual(candidate.opportunity.eligible_majors, []);
@@ -266,6 +268,7 @@ test("converts an explicitly zoned deadline into a UTC instant", () => {
   assert.equal(candidate.opportunity.deadline, "2026-10-19T03:59:00.000Z");
   assert.equal(candidate.opportunity.deadline_has_time, true);
   assert.equal(candidate.opportunity.deadline_source_timezone, "EDT");
+  assert.equal(candidate.opportunity.deadline_source, "organiser");
   assert.equal(candidate.application_url, "https://apply.example.edu/design");
   assert.equal(candidate.source_published_at, "2026-07-01T13:00:00.000Z");
   assert.equal(candidate.last_seen_at, "2026-07-14T00:00:00.000Z");
@@ -300,6 +303,35 @@ test("does not assume Singapore time when the source omits a timezone", () => {
   assert.equal(candidate.opportunity.deadline, "2026-10-18T00:00:00.000Z");
   assert.equal(candidate.opportunity.deadline_has_time, true);
   assert.equal(candidate.opportunity.deadline_source_timezone, null);
+  assert.equal(candidate.opportunity.deadline_source, "organiser");
+});
+
+test("treats a deadline in an external Outlook email as an organiser deadline", () => {
+  const candidate = parseEmailToOpportunityCandidate(
+    {
+      id: "external-organiser-message",
+      subject: "Global Student Innovation Competition Applications",
+      from: {
+        emailAddress: {
+          name: "Global Innovation Foundation",
+          address: "competitions@global-innovation.example",
+        },
+      },
+      receivedDateTime: "2026-07-15T01:00:00Z",
+      body: {
+        contentType: "text",
+        content:
+          "Open to university students worldwide. Deadline: 30 August 2026. Apply at https://global-innovation.example/apply.",
+      },
+    },
+    {
+      sourcePriority: 0,
+      ownerUserId: "11111111-1111-4111-8111-111111111111",
+    }
+  );
+
+  assert.ok(candidate);
+  assert.equal(candidate.opportunity.deadline_source, "organiser");
 });
 
 test("rejects a general web directory with no deadline or application route", () => {
