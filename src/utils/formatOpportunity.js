@@ -1,5 +1,9 @@
 export const EXPIRED_RETENTION_DAYS = 15;
 
+export function getOpportunityDetailsUrl(opportunity) {
+  return opportunity.source_url || opportunity.application_url || null;
+}
+
 export function getOpportunityExpiryTime(opportunity) {
   if (opportunity.deadline) {
     if (

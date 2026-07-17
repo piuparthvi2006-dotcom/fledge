@@ -3,10 +3,31 @@ import test from "node:test";
 import {
   formatOpportunity,
   getEligibilityWarning,
+  getOpportunityDetailsUrl,
   getOpportunityExpiryTime,
   isExpiredOpportunityRetained,
   isOpportunityExpired,
 } from "./formatOpportunity.js";
+
+test("uses the informational source page for View Details", () => {
+  assert.equal(
+    getOpportunityDetailsUrl({
+      source_url: "https://www.mindef.gov.sg/scholarships",
+      application_url: "https://form.gov.sg/apply",
+    }),
+    "https://www.mindef.gov.sg/scholarships"
+  );
+});
+
+test("falls back to the application page when no source page exists", () => {
+  assert.equal(
+    getOpportunityDetailsUrl({
+      source_url: null,
+      application_url: "https://form.gov.sg/apply",
+    }),
+    "https://form.gov.sg/apply"
+  );
+});
 
 test("shows explicitly zoned deadlines in Singapore time", () => {
   const opportunity = formatOpportunity({

@@ -8,6 +8,7 @@ import { Flag } from 'lucide-react';
 import OpportunityReportDialog from './OpportunityReportDialog';
 import {
   getEligibilityWarning,
+  getOpportunityDetailsUrl,
   isOpportunityExpired,
 } from '../utils/formatOpportunity';
 
@@ -48,7 +49,7 @@ export default function OpportunityCard({ opportunity, isBookmarked, onBookmark,
   const eligibilityWarning =
     opportunity.eligibilityWarning || getEligibilityWarning(opportunity);
   const displayedBadge = eligibilityWarning ? 'Check eligibility' : badge;
-  const detailsUrl = opportunity.application_url || opportunity.source_url;
+  const detailsUrl = getOpportunityDetailsUrl(opportunity);
   const detailsUnavailable = !detailsUrl;
 
   return (
