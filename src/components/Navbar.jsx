@@ -16,6 +16,7 @@ export default function Navbar({ activePage }) {
   const navLinks = [
     { label: 'Explore', path: '/explore' },
     { label: 'Saved', path: '/saved' },
+    ...(user ? [{ label: 'Study', path: '/study' }] : []),
     { label: 'For You', path: '/for-you' },
     ...(user ? [{ label: 'Outlook', path: '/outlook' }] : []),
   ];
