@@ -1011,6 +1011,7 @@ const INFORMATIONAL_PUBLIC_WEB_TITLE_PATTERNS = [
   /^partner universities(?: for exchange)?(?:\s*[-|–—]\s*.*)?$/i,
   /^returning exchange(?:rs| students?)(?:\s*[-|–—]\s*.*)?$/i,
   /^student exchange programme(?:\s*[-|–—]\s*.*)?$/i,
+  /^tti\s*[-|–—]\s*nus enterprise(?:\s*[-|–—]\s*.*)?$/i,
   /\btemplate(?:\s*[-|–—]\s*.*)?$/i,
 ];
 

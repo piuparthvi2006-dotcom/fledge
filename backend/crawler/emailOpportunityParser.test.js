@@ -506,6 +506,7 @@ test("rejects support and directory pages even when navigation contains applicat
     ["Partner Universities For Exchange", "https://www.nus.edu.sg/gro/global-programmes/student-exchange/partner-universities"],
     ["Returning Exchange Students", "https://www.nus.edu.sg/gro/global-programmes/student-exchange/returning-exchangers"],
     ["Student Exchange Programme", "https://www.nus.edu.sg/gro/global-programmes/student-exchange"],
+    ["TTI - NUS Enterprise", "https://enterprise.nus.edu.sg/tti/"],
   ];
 
   for (const [title, url] of pages) {
