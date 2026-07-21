@@ -6,7 +6,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   sendPasswordResetEmail,
   signInWithEmail,
-  signInWithNus,
 } from '../utils/auth';
 
 export default function LogIn() {
@@ -21,19 +20,6 @@ export default function LogIn() {
   const nextPath = requestedNext.startsWith('/') && !requestedNext.startsWith('//')
     ? requestedNext
     : '/explore';
-
-  async function handleNusSignIn() {
-    setSubmitting(true);
-    setErrorMessage('');
-    setStatusMessage('');
-
-    try {
-      await signInWithNus(nextPath);
-    } catch (error) {
-      setSubmitting(false);
-      setErrorMessage(error.message);
-    }
-  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -108,35 +94,8 @@ export default function LogIn() {
           Welcome back
         </h1>
         <p style={{ fontSize: '14px', color: '#9a9a8a', textAlign: 'center', marginBottom: '32px' }}>
-          Log in to keep tracking your opportunities.
+          Use the email address you registered with.
         </p>
-
-        {/* NUS SSO */}
-        <button
-          disabled={submitting}
-          onClick={handleNusSignIn}
-          type="button"
-          style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-          padding: '14px', borderRadius: '12px', border: '1.5px solid #e2ddd6', background: 'white',
-          fontSize: '15px', fontWeight: 500, color: '#1a1a18', cursor: submitting ? 'wait' : 'pointer',
-          fontFamily: "'DM Sans', sans-serif", marginBottom: '24px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        }}>
-          <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
-            <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-            <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-            <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-            <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-          </svg>
-          Continue with NUS Email
-        </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <div style={{ flex: 1, height: '1px', background: '#e2ddd6' }} />
-          <div style={{ fontSize: '12px', color: '#b0b0a8', whiteSpace: 'nowrap' }}>or log in with email</div>
-          <div style={{ flex: 1, height: '1px', background: '#e2ddd6' }} />
-        </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '16px' }}>
@@ -144,7 +103,7 @@ export default function LogIn() {
             <input
               autoComplete="email"
               onChange={event => setEmail(event.target.value)}
-              placeholder="e0123456@u.nus.edu"
+              placeholder="you@example.com"
               required
               style={inputStyle}
               type="email"

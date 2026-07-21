@@ -1,8 +1,8 @@
 // SignUp.jsx
-// The sign up page — NUS email SSO button + fallback email/password form.
+// The sign up page uses email/password while institutional SSO is unavailable.
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { signInWithNus, signUpWithEmail } from '../utils/auth';
+import { signUpWithEmail } from '../utils/auth';
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -16,18 +16,6 @@ export default function SignUp() {
   const nextPath = requestedNext.startsWith('/') && !requestedNext.startsWith('//')
     ? requestedNext
     : '/explore';
-
-  async function handleNusSignIn() {
-    setStatus('submitting');
-    setMessage('');
-
-    try {
-      await signInWithNus(nextPath);
-    } catch (error) {
-      setStatus('idle');
-      setMessage(error.message);
-    }
-  }
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -93,43 +81,8 @@ export default function SignUp() {
           Create your account
         </h1>
         <p style={{ fontSize: '14px', color: '#9a9a8a', textAlign: 'center', marginBottom: '32px', lineHeight: 1.5 }}>
-          NUS students only. Use your school email to get started.
+          Use any email address to get started.
         </p>
-
-        {/* NUS / Microsoft SSO button */}
-        <button
-          disabled={status === 'submitting'}
-          onClick={handleNusSignIn}
-          type="button"
-          style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-          padding: '14px', borderRadius: '12px', border: '1.5px solid #e2ddd6', background: 'white',
-          fontSize: '15px', fontWeight: 500, color: '#1a1a18', cursor: status === 'submitting' ? 'wait' : 'pointer',
-          fontFamily: "'DM Sans', sans-serif", marginBottom: '24px',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-        }}>
-          <svg width="20" height="20" viewBox="0 0 21 21" fill="none">
-            <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-            <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-            <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-            <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-          </svg>
-          Continue with NUS Email
-        </button>
-
-        <div style={{
-          background: '#FEF0E7', borderRadius: '10px', padding: '12px 14px',
-          fontSize: '12px', color: '#7a5a40', textAlign: 'center', marginBottom: '24px', lineHeight: 1.5,
-        }}>
-          🎓 You'll be redirected to the NUS Microsoft login page. Use your NUSNET ID and password — same as your NUS email.
-        </div>
-
-        {/* Divider */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <div style={{ flex: 1, height: '1px', background: '#e2ddd6' }} />
-          <div style={{ fontSize: '12px', color: '#b0b0a8', whiteSpace: 'nowrap' }}>or sign up with any email</div>
-          <div style={{ flex: 1, height: '1px', background: '#e2ddd6' }} />
-        </div>
 
         {/* Email/password form */}
         <form onSubmit={handleSubmit}>
@@ -150,7 +103,7 @@ export default function SignUp() {
             <input
               autoComplete="email"
               onChange={event => setEmail(event.target.value)}
-              placeholder="e0123456@u.nus.edu"
+              placeholder="you@example.com"
               required
               style={inputStyle}
               type="email"
