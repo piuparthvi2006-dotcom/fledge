@@ -16,7 +16,6 @@ import {
 } from '../utils/noteExtraction';
 import './Study.css';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES = 5;
 const ACCEPTED_EXTENSIONS = new Set(['pdf', 'docx', 'txt']);
 
@@ -216,14 +215,10 @@ export default function Study() {
 
     const invalidFile = incomingFiles.find(file => (
       !ACCEPTED_EXTENSIONS.has(getFileExtension(file.name))
-      || file.size > MAX_FILE_SIZE
     ));
 
     if (invalidFile) {
-      const reason = invalidFile.size > MAX_FILE_SIZE
-        ? 'is larger than 10 MB'
-        : 'is not a PDF, DOCX or TXT file';
-      setSourceError(`${invalidFile.name} ${reason}.`);
+      setSourceError(`${invalidFile.name} is not a PDF, DOCX or TXT file.`);
       return;
     }
 
@@ -417,7 +412,7 @@ export default function Study() {
                   >
                     <UploadCloud aria-hidden="true" size={28} />
                     <strong>Drop your notes here</strong>
-                    <span>PDF, DOCX or TXT, up to 10 MB each</span>
+                    <span>PDF, DOCX or TXT</span>
                     <button
                       className="study-secondary-button"
                       onClick={() => fileInputRef.current?.click()}
