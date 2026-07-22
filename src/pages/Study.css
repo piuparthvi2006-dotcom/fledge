@@ -468,20 +468,26 @@
 .study-generated-content h3 {
   color: #22221f;
   font-family: 'Fraunces', serif;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1.25;
   margin: 26px 0 10px;
 }
 
 .study-generated-content h1 {
-  font-size: 24px;
+  border-bottom: 1px solid #ded8d0;
+  font-size: 26px;
+  padding-bottom: 10px;
 }
 
 .study-generated-content h2 {
-  font-size: 20px;
+  font-size: 21px;
 }
 
 .study-generated-content h3 {
+  color: #3c3b36;
   font-size: 17px;
+  font-weight: 700;
 }
 
 .study-generated-content p,

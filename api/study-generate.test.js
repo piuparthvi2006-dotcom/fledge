@@ -45,6 +45,9 @@ test('wraps student notes as untrusted source content', () => {
   });
 
   assert.match(messages[0].content, /untrusted reference text/);
+  assert.match(messages[0].content, /well-structured Markdown/);
+  assert.match(messages[0].content, /## headings for main sections/);
+  assert.doesNotMatch(messages[0].content, /Do not return HTML or Markdown syntax/);
   assert.match(messages[1].content, /<student_notes>/);
   assert.match(messages[1].content, /5 mixed questions/);
 });
