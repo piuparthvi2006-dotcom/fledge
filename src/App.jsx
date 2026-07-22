@@ -29,7 +29,7 @@ export default function App() {
     <BrowserRouter>
       <OpportunitiesProvider>
         <Routes>
-          <Route path="/" element={<OutlookGate><Landing /></OutlookGate>} />
+          <Route path="/" element={<OutlookGate allowPublicFallback><Landing /></OutlookGate>} />
           <Route path="/explore" element={<OutlookGate><Explore /></OutlookGate>} />
           <Route path="/saved" element={<OutlookGate><Saved /></OutlookGate>} />
           <Route path="/study" element={<RequireAuth><Study /></RequireAuth>} />

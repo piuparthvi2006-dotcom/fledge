@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import CTA from '../components/CTA';
 import Footer from '../components/Footer';
 import Hero from '../components/Hero';
+import LandingFeatures from '../components/LandingFeatures';
 import Navbar from '../components/Navbar';
 import OpportunityCard from '../components/OpportunityCard';
 import OpportunityDataState from '../components/OpportunityDataState';
 import { useOpportunities } from '../hooks/useOpportunities';
+import './Landing.css';
 
 function getRecentTime(opportunity) {
   const timestamp = opportunity.updated_at
@@ -42,40 +44,37 @@ export default function Landing() {
   }
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div className="landing-page">
       <Navbar />
       <Hero />
+      <LandingFeatures />
 
-      <section style={{ padding: '56px 48px', background: '#F5F2ED' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
-          <div>
-            <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 600 }}>
-              Recent Opportunities
-            </h2>
-            <p style={{ fontSize: '13px', color: '#7A7A72', marginTop: '3px' }}>
-              Current opportunities from verified sources
-            </p>
+      <section className="landing-recent">
+        <div className="landing-container">
+          <div className="landing-recent__header">
+            <div>
+              <h2>Recent Opportunities</h2>
+              <p>Current opportunities from verified sources</p>
+            </div>
+            <Link to="/explore">View all</Link>
           </div>
-          <Link to="/explore" style={{ fontSize: '13px', color: '#C94F1A', fontWeight: 500, textDecoration: 'none' }}>
-            View all
-          </Link>
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '14px' }}>
-          {isLoading || error ? (
-            <OpportunityDataState error={error} isLoading={isLoading} onRetry={refresh} />
-          ) : preview.length === 0 ? (
-            <p style={{ color: '#7A7A72', fontSize: '13px', gridColumn: '1 / -1' }}>
-              No active opportunities are available yet.
-            </p>
-          ) : preview.map(opportunity => (
-            <OpportunityCard
-              isBookmarked={savedOpportunityIds.includes(opportunity.id)}
-              key={opportunity.id}
-              onBookmark={handleBookmark}
-              opportunity={opportunity}
-            />
-          ))}
+          <div className="landing-opportunity-grid">
+            {isLoading || error ? (
+              <OpportunityDataState error={error} isLoading={isLoading} onRetry={refresh} />
+            ) : preview.length === 0 ? (
+              <p style={{ color: '#7A7A72', fontSize: '13px', gridColumn: '1 / -1' }}>
+                No active opportunities are available yet.
+              </p>
+            ) : preview.map(opportunity => (
+              <OpportunityCard
+                isBookmarked={savedOpportunityIds.includes(opportunity.id)}
+                key={opportunity.id}
+                onBookmark={handleBookmark}
+                opportunity={opportunity}
+              />
+            ))}
+          </div>
         </div>
       </section>
 

@@ -2,9 +2,13 @@ import { Navigate, useLocation } from 'react-router-dom';
 import OpportunityDataState from './OpportunityDataState';
 import { useOpportunities } from '../hooks/useOpportunities';
 
-export default function OutlookGate({ children }) {
+export default function OutlookGate({ allowPublicFallback = false, children }) {
   const location = useLocation();
   const { error, isLoading, profile, refresh, user } = useOpportunities();
+
+  if (allowPublicFallback && (isLoading || error)) {
+    return children;
+  }
 
   if (isLoading) {
     return (
