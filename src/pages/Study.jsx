@@ -8,6 +8,8 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Navbar from '../components/Navbar';
 import { supabase } from '../lib/supabase';
 import {
@@ -585,7 +587,9 @@ export default function Study() {
             <div className="study-result-content">
               <p className="study-result-label">Study output</p>
               <h2>Your {generatedFormat?.label.toLowerCase() || 'study material'}</h2>
-              <div className="study-generated-content">{result}</div>
+              <div className="study-generated-content">
+                <Markdown remarkPlugins={[remarkGfm]}>{result}</Markdown>
+              </div>
             </div>
           ) : (
             <div>
